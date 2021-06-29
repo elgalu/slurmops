@@ -2,7 +2,7 @@
 name = "slurmops"
 # Note tbump will bump `version` and also `slurmops/__init__.py`
 # Do not change the version here but rather `tbump "0.0.0.1" --only-patch`
-version = "0.0.0"
+version = "0.0.1"
 description = "NVIDIA/DeepOps on AWS EC2"
 authors = ["Leo Gallucci <elgalu3@gmail.com>"]
 readme = "README.md"

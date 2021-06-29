@@ -8,7 +8,7 @@ github_url = "https://github.com/elgalu/slurmops"
 
 [version]
 # Do not change the version here but rather `tbump "0.0.5" --only-patch`
-current = "0.0.0"
+current = "0.0.1"
 regex = '''
   (?P<major>\d+)
   \.
