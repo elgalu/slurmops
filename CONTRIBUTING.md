@@ -7,7 +7,7 @@ can expect to be treated with respect at all times when interacting with this pr
 
 Clone the project locally and simply run `curl -sL https://raw.github.com/elgalu/ensure/main/setup.sh | bash`
 
-then `source .venv/bin/activate`
+Then `source .venv/bin/activate`
 
 If [contributor_setup](contributing/contributor_setup.sh) didn't work on your system you can do the setup
 manually, step by step:
@@ -48,7 +48,7 @@ Run `poetry run invoke hooks tests`
 
 ## Maintainers
 
-Note the first version was bumped with `tbump init --pyproject "0.0.0.1`
+Note the first version was bumped with `tbump init "0.0.0.1"`
 
 ### Creating a new version
 

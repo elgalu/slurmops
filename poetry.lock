@@ -1020,8 +1020,8 @@ tomlkit = ">=0.5.8;<0.8"
 [package.source]
 type = "git"
 url = "https://github.com/dmerejkowsky/tbump.git"
-reference = "1799825ad30954bf04c8e5b842ead7b8f247f3a8"
-resolved_reference = "1799825ad30954bf04c8e5b842ead7b8f247f3a8"
+reference = "03988d5d2267ddd4a33b3c4196b05b7f24f0a0a4"
+resolved_reference = "03988d5d2267ddd4a33b3c4196b05b7f24f0a0a4"
 
 [[package]]
 name = "toml"
@@ -1161,7 +1161,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "cf881f5bb8addd5192e4f3e622f52344fbabcc5363fa0201f3a285cfa75c4e6c"
+content-hash = "34d78b8f0883269046e8b324b99e49cd5c4fa0cdfcee580f1392f701d452c895"
 
 [metadata.files]
 appdirs = [

@@ -78,7 +78,7 @@ safety = "^1.10"
 towncrier = "^21.3.0"
 # Bump software releases with https://github.com/dmerejkowsky/tbump
 # See `tbump.toml`
-tbump = { git = "https://github.com/dmerejkowsky/tbump.git", rev = "1799825ad30954bf04c8e5b842ead7b8f247f3a8" }
+tbump = { git = "https://github.com/dmerejkowsky/tbump.git", rev = "03988d5d2267ddd4a33b3c4196b05b7f24f0a0a4" }
 # Using notebooks for debugging + plotting
 ipykernel = "^5.5.5"
 
