@@ -1,8 +1,7 @@
 <!-- Thank you for your contribution! -->
 <!-- Unless your change is trivial, please create an issue to discuss the change before creating a PR -->
-<!-- markdownlint-disable -->
 
-## Change Summary
+# Change Summary
 
 <!-- Please give a short summary of the changes. -->
 

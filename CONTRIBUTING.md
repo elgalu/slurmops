@@ -33,9 +33,6 @@ Start all your feature/bugs/other with:
 towncrier create "initial_setup.add" # just an example feature name
 #=> Created news fragment at .changelog.d/initial_setup.add
 # Now edit the initial_setup.add file describing what you're doing.
-# Then continue:
-towncrier build --draft  # test first
-towncrier build          # final
 ```
 
 ## Running the tests locally
@@ -48,13 +45,30 @@ Run `poetry run invoke hooks tests`
 
 ## Maintainers
 
-Note the first version was bumped with `tbump init "0.0.0.1"`
+Note the first version was bumped with `tbump init "0.0.1"`
 
 ### Creating a new version
 
-If you want to bump the version locally, without creating a git tag use `tbump "0.0.0.1" --only-patch`
+#### Build the Changelog
 
-However the version bumping is currently automated in CI/CD via `tbump "0.0.0.1" --non-interactive`
+Add `--yes` when running in CI/CD to avoid stdin questions:
+
+```sh
+towncrier build --version "0.0.1" --draft  # test first
+towncrier build --version "0.0.1"          # final
+```
+
+#### Manual tbump release
+
+First make sure you're on a release branch, e.g. `git checkout -b release-0.0.1` .
+And that the release branch is pushed (tracked) in origin, else you'll get `does not track anything` error.
+Finally bump with `tbump "0.0.1"`
+
+#### Additional notes on tbump
+
+If you want to bump the version locally, without creating a git tag use `tbump "0.0.1" --only-patch`
+
+However the version bumping is currently automated in CI/CD via `tbump "0.0.1" --non-interactive`
 
 ### Build and publish the new version to PyPI
 

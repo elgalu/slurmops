@@ -1,4 +1,3 @@
-<!-- markdownlint-disable -->
 {% for section, _ in sections.items() %}
 {% if section %}{{section}}{% endif -%}
 
