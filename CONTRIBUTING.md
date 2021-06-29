@@ -49,6 +49,11 @@ Note the first version was bumped with `tbump init "0.0.1"`
 
 ### Creating a new version
 
+#### Create a release branch
+
+First make sure you're on a release branch, e.g. `git checkout -b release-0.0.1` .
+And that the release branch is pushed (tracked) in origin, else you'll get `does not track anything` tbump error.
+
 #### Build the Changelog
 
 Add `--yes` when running in CI/CD to avoid stdin questions:
@@ -60,9 +65,7 @@ towncrier build --version "0.0.1"          # final
 
 #### Manual tbump release
 
-First make sure you're on a release branch, e.g. `git checkout -b release-0.0.1` .
-And that the release branch is pushed (tracked) in origin, else you'll get `does not track anything` error.
-Finally bump with `tbump "0.0.1"`
+Finally bump with `tbump "0.0.1"` , this will also publish to <https://pypi.org/project/slurmops>
 
 #### Additional notes on tbump
 
