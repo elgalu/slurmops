@@ -6,6 +6,10 @@ start_string = "The format is based on [Keep a Changelog](https://keepachangelog
 title_format = "\n## {version} - [{project_date}]"
 issue_format = "[#{issue}]"
 underlines = ["", ""]
+# TODO: gh release create 0.0.2 ...
+# https://github.com/twisted/towncrier/issues/353
+# gh release create 0.0.2 --title "gh release title" -F CHANGELOG.md dist/*
+#=> https://github.com/elgalu/some-project/releases/tag/0.0.2
 
 [[tool.towncrier.type]]
 directory = "add"

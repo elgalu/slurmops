@@ -130,7 +130,7 @@ repos:
 
   # https://github.com/igorshubovych/markdownlint-cli#configuration
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: "596386e6a7da92547c4fc6b94fce59bcbc8290ee" # frozen: v0.27.1
+    rev: "d6e415450ce274073fffad32c6503ad35a9cacea" # frozen: v0.27.1
     hooks:
       - id: markdownlint
         args: ["--ignore", "towncrier-template.md"]
