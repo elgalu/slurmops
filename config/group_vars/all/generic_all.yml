@@ -1,0 +1,325 @@
+################################################################################
+# DeepOps Ansible Config                                                       #
+################################################################################
+#
+# Configuration common to all hosts
+# Define per-group or per-host values in the other configuration files
+#
+
+################################################################################
+# NETWORK                                                                      #
+################################################################################
+# DNS config
+# Playbook: dns_config
+# dns_config_servers: [8.8.8.8]
+# dns_config_search: [example.com]
+
+# NTP configuration
+# Playbook: chrony-client
+#
+# Chrony is a replacement of NTP client. It can synchronize the system clock
+# faster with better time accuracy and it is particularly useful for the systems
+# which are not online all the time.
+chrony_install: true
+chrony_service_state: "started"
+# `chrony_service_enabled` needs "yes"/"no", true/false is not supported for services:
+# https://docs.ansible.com/ansible/2.9/modules/service_module.html#parameters
+chrony_service_enabled: "yes"
+chrony_timezone: "Etc/UTC"
+
+# Set hostname based on inventory file
+deepops_set_hostname: true
+
+################################################################################
+# SOFTWARE                                                                     #
+################################################################################
+# Extra software to install or remove
+# Playbook: software
+# software_extra_packages:
+#  - curl
+#  - git
+#  - rsync
+#  - screen
+#  - tmux
+#  - vim
+#  - wget
+#  - build-essential
+#  - linux-tools-generic
+#  - "{{ 'linux-headers-' + ansible_kernel }}"
+# software_remove_packages:
+#  - popularity-contest
+
+################################################################################
+# STORAGE                                                                      #
+################################################################################
+# AutoFS configuration
+# Playbook: authentication
+#
+# AutoFS provides automounting of removable media or network shares when they are inserted or accessed.
+# TODO: mount Lustre here
+# autofs_mount: "/home"
+# autofs_map: "auto.home_linux"
+
+# TODO: fix conditional
+# if in aws:
+# aws_kernel: "{{ ansible_kernel }}"
+# else:
+aws_kernel: "5.8.0-1038-aws"
+
+# NFS Client
+# This config will mount an NFS share on hosts
+# Playbook: nfs-client.yml
+# TODO: mount EFS in /nfs/
+# nfs_mounts:
+#  - mountpoint: /mnt/shared
+#    server: '{{ groups["slurm-head"][0] }}'
+#    path: /export/shared
+#    options: async,vers=3
+
+################################################################################
+# USERS                                                                        #
+################################################################################
+# see config/group_vars/all/groups_and_users.yml
+
+################################################################################
+# SSH HARDENING                                                                #
+#   dev-sec.ssh-hardening role called from users playbook                      #
+################################################################################
+
+ssh_client_hardening: false
+ssh_server_password_login: false
+ssh_use_pam: true
+ssh_max_auth_retries: 10
+sftp_enabled: true
+sftp_chroot: false
+# PrintMotd Specifies whether sshd(8) should print /etc/motd when a user logs in interactively.
+ssh_print_motd: true
+# AllowTcpForwarding https://unix.stackexchange.com/a/491693/57665
+ssh_allow_tcp_forwarding: "yes"
+# AllowAgentForwarding Specifies whether ssh-agent(1) forwarding is permitted. The default is yes.
+# Note that disabling agent forwarding does not improve security unless users are also denied
+ssh_allow_agent_forwarding: true
+# PermitUserEnvironment Specifies whether `~/.ssh/environment` and `environment=` options
+# in `~/.ssh/authorized_keys` are processed.
+ssh_server_permit_environment_vars: "no"
+
+################################################################################
+# SSH HARDENING                                                                #
+# https://github.com/dev-sec/ansible-collection-hardening/blob/a075af2/roles/os_hardening/templates/etc/login.defs.j2
+################################################################################
+# grep "UID_MIN" /etc/login.defs
+os_auth_uid_min: 100000
+# grep "UID_MAX" /etc/login.defs
+os_auth_uid_max: 999999
+# grep "GID_MIN" /etc/login.defs
+os_auth_gid_min: 100000
+# grep "GID_MAX" /etc/login.defs
+os_auth_gid_max: 50999999
+#
+# If /etc/subuid exists, the commands useradd and newusers (unless the user already have subordinate user IDs)
+# allocate SUB_UID_COUNT unused user IDs from the range SUB_UID_MIN to SUB_UID_MAX for each new user.
+# The default values for SUB_UID_MIN, SUB_UID_MAX, SUB_UID_COUNT are respectively 100000, 600100000 and 65536.
+#
+# The following settings:
+# - support 32752 users with 65536 sub uids each.
+# - support 31989 groups with 65536 sub gids each.
+# grep "SUB_UID_MIN" /etc/login.defs
+os_auth_sub_uid_min: 1000000
+# grep "SUB_UID_MAX" /etc/login.defs
+os_auth_sub_uid_max: 2147483647
+# grep "SUB_UID_COUNT" /etc/login.defs
+os_auth_sub_uid_count: 65536
+# grep "SUB_GID_MIN" /etc/login.defs
+os_auth_sub_gid_min: 51000000
+# grep "SUB_GID_MAX" /etc/login.defs
+os_auth_sub_gid_max: 2147483647
+# grep "SUB_GID_COUNT" /etc/login.defs
+os_auth_sub_gid_count: 65536
+
+################################################################################
+# NVIDIA                                                                       #
+################################################################################
+# NVIDIA GPU configuration
+# Playbook: nvidia-cuda
+cuda_version: cuda-toolkit-11-2
+
+# roles/galaxy/nvidia.nvidia_driver/defaults/main.yml
+# Driver 460 up to Cuda 11.2
+# Driver 465 up to Cuda 11.3
+# Driver 470 up to Cuda 11.4
+nvidia_driver_ubuntu_branch: "470"
+
+# Playbook: nvidia-set-gpu-clocks
+# Resets the Gpu clocks to the default values. (see the `--reset-gpu-clocks` flag in nvidia-smi for more)
+gpu_clock_reset: false
+# Specifies <minGpuClock,maxGpuClock> clocks as a pair (e.g. 1500,1500) that
+# defines the range of desired locked GPU clock speed in MHz. Setting this will
+# supersede application clocks and take effect regardless if an app is running.
+# Input can also be a singular desired clock value. (see the
+# `--lock-gpu-clocks` flag in nvidia-smi for more)
+# gpu_clock_lock: "1507,1507"
+
+# Debugging var: force install NVIDIA driver even if GPU not detected
+nvidia_driver_force_install: false
+
+################################################################################
+# CONTAINER RUNTIME                                                            #
+################################################################################
+# Docker configuration
+# Playbook: docker, nvidia-docker
+#
+# For supported Docker versions, see: kubespray/roles/container-engine/docker/vars/*
+docker_install: true
+docker_install_compose: true
+docker_compose_version: "1.29.2"
+docker_compose_path: /usr/local/bin/docker-compose
+# https://github.com/geerlingguy/ansible-role-docker#role-variables
+docker_edition: "ce"
+docker_package_state: "present"
+docker_service_enabled: true
+docker_version: "20.10.7"
+# TODO: with https://github.com/ansible-community/ansible-bender
+#       Ansible is the frontend, buildah is the backend.
+docker_dns_servers_strict: false
+docker_storage_options: -s overlay2
+# docker_options: "--bip=192.168.99.1/24"
+# Enable docker iptables
+# If this isn't set, containers won't have access to the outside net
+# See https://github.com/kubernetes-sigs/kubespray/issues/2002
+docker_iptables_enabled: true
+# Docker daemon logins
+#   Note: example only! you should put these in an Ansible Vault file for security!
+#
+# docker_login_registries:
+# - registry: docker.io
+#   username: myuser
+#   password: mypassword
+#   email: docker@docker.io
+# - registry: nvcr.io
+#   username: '$oauthtoken'
+#   password: mypassword
+
+# Enroot configuration
+# Playbook: slurm, slurm-cluster
+#
+# See: https://github.com/NVIDIA/pyxis/wiki/Setup#enroot-configuration-example
+# enroot_runtime_path: "/enroot/runtime/user-$(whoami)"
+# /run will use tmpfs, make sure you have enough RAM
+# see `RuntimeDirectorySize=10%` at /etc/systemd/logind.conf
+enroot_runtime_base_path: "/run/enroot"
+enroot_runtime_path: "{{ enroot_runtime_base_path }}/user-$(whoami)"
+# TODO: Maybe move the enroot cache path to a Lustre path
+enroot_cache_base_path: "/enroot/cache"
+enroot_cache_path: "{{ enroot_cache_base_path }}/user-$(whoami)"
+enroot_data_base_path: "/enroot/data"
+enroot_data_path: "{{ enroot_data_base_path }}/user-$(whoami)"
+# TODO: Make sure users can't overwrite shared read-only images
+enroot_config: |
+  ENROOT_CONFIG_PATH ${HOME}/.config/enroot
+  ENROOT_SQUASH_OPTIONS -noI -noD -noF -noX -no-duplicates
+  ENROOT_MOUNT_HOME y
+  ENROOT_RESTRICT_DEV y
+  ENROOT_ROOTFS_WRITABLE y
+  ENROOT_RUNTIME_PATH {{ enroot_runtime_path }}
+  ENROOT_CACHE_PATH {{ enroot_cache_path }}
+  ENROOT_DATA_PATH {{ enroot_data_path }}
+enroot_environ_config_files: []
+# Singularity configuration
+# Playbook: singularity, slurm-cluster
+# Singularity target version
+singularity_version: "3.7.4"
+singularity_conf_path: "/etc/singularity/singularity.conf"
+bind_paths:
+  []
+  # example:
+  # - /mnt/shared
+golang_install_dir: "/opt/go/{{ golang_version }}"
+golang_gopath: /opt/go/packages
+
+################################################################################
+# MONITORING                                                                   #
+################################################################################
+# Collectd
+# Playbook: collectd
+# collectd_network_server: "deepops-mgmt.example.com"
+# collectd_network_port: "30300"
+# collectd_python_module_path: "/usr/lib/collectd/dcgm"
+# collectd_python_modules: []
+# collectd_config_dir: "/etc/collectd/collectd.conf.d"
+# with_dcgm_collectd: false
+
+################################################################################
+# MAAS                                                                         #
+################################################################################
+# MAAS (Metal as a Service): Node provisioning/PXE service
+# Playbook: maas, maas_management
+# maas_adminusers:
+#   - username: "admin"
+#     email: "admin@{{ maas_dns_domain }}"
+#     password: "admin"
+# maas_dns_domain: "deepops.local"
+# maas_region_controller: "192.168.1.1"
+# maas_region_controller_url: "http://{{ maas_region_controller }}:5240/MAAS"
+# maas_repo: "ppa:maas/2.8"
+# # Defines if maas user should generate ssh keys
+# # Usable for remote KVM/libvirt power actions
+# maas_setup_user: false
+# maas_single_node_install: true
+# maas_kvm: false
+
+################################################################################
+# NVIDIA Datacenter GPU Manager                                                #
+################################################################################
+install_dcgm: true
+
+################################################################################
+# Misc.                                                                        #
+################################################################################
+# Set /etc/rc.local contents
+# Playbook: rc-local
+# rc_local_contents: |
+#   echo foo
+#   echo bar
+#
+# DeepOps specific config
+deepops_dir: /opt/deepops
+# Directory for python virtualenv
+deepops_venv: "{{ deepops_dir }}/.venv"
+
+# Ansible Python path
+# ansible_python_interpreter: "/usr/bin/user_hidden_python"
+sys_apt_py_ver: "3.8"
+sys_apt_py_bin_path: "/usr/bin/python{{ sys_apt_py_ver }}"
+
+# OpenMPI
+# Playbook: openmpi
+openmpi_version: 4.0.3
+
+# Disable cloud-init
+# TODO: Enable for AWS
+deepops_disable_cloud_init: false
+
+################################################################################
+# Container registry                                                           #
+################################################################################
+standalone_container_registry_cache_enable: false
+# standalone_container_registry_port: "5000"
+
+# To configure some set of hosts as insecure registries, list them here.
+# Slurm cluster playbooks will automatically use the head nodes for
+# these if not specified.
+# docker_insecure_registries: ["<host>:<port>"]
+# docker_registry_mirrors: ["http://<host>:<port>"]
+
+################################################################################
+# Configuration for NGC-Ready playbook                                         #
+################################################################################
+# https://ngc.nvidia.com/catalog/containers/nvidia:cuda/tags
+# ngc_ready_cuda_container: "nvcr.io/nvidia/cuda:10.1-base-ubuntu18.04"
+ngc_ready_cuda_container: "nvcr.io/nvidia/cuda:11.4.0-base-ubuntu20.04"
+# https://ngc.nvidia.com/catalog/containers/nvidia:pytorch/tags
+# ngc_ready_pytorch: "nvcr.io/nvidia/pytorch:18.10-py3"
+ngc_ready_pytorch: "nvcr.io/nvidia/pytorch:21.06-py3"
+# https://ngc.nvidia.com/catalog/containers/nvidia:tensorflow/tags
+# ngc_ready_tensorflow: "nvcr.io/nvidia/tensorflow:18.10-py3"
+ngc_ready_tensorflow: "nvcr.io/nvidia/tensorflow:21.06-tf2-py3"

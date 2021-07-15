@@ -1,0 +1,28 @@
+# --extra-vars "@/vars_files/aws.yml"
+running_in_aws: true
+building_ami: false
+docker_config_auths_url: "ecr"
+
+# 10% of 1 TiB should be enough
+logind_conf_runtime_directory_size: 10%
+
+# TODO: Set passwords
+slurm_password: ReplaceWithASecurePasswordInTheVaultX
+# TODO: Move mariadb into the cloud; roles/slurm/tasks/controller.yml
+slurm_db_username: slurm
+slurm_db_password: AlsoReplaceWithASecurePasswordInTheVaultX
+
+# TODO: change password
+ood_default_password: "deepops***XX"
+
+chrony_config_server:
+  - "169.254.169.123"
+
+# If not in the `slurm_allow_ssh_user` then the user might get:
+#   Access denied by pam_slurm_adopt: you have no active jobs on this node
+#   Connection closed by 172.31.24.10 port 22
+slurm_allow_ssh_user:
+  - root
+  - ubuntu
+  # While using slurm-single we need to allow ssh into compute
+  - lgallucci

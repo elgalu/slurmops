@@ -22,7 +22,6 @@ manually, step by step:
 1. Run `poetry install --no-root` (--no-root to install the dependencies only, not the project)
 1. Install [invoke](https://www.pyinvoke.org/installing.html) with `pip install invoke`
 1. Run `invoke setup`
-1. Open the project, if possible, with Visual Studio Code: `code slurmops.code-workspace`
 
 ## Feature branches
 
@@ -51,7 +50,7 @@ Note the first version was bumped with `tbump init "0.0.1"`
 
 #### Create a release branch
 
-First make sure you're on a release branch, e.g. `git checkout -b release-0.0.1` .
+First make sure you're on a release branch, e.g. `git checkout -b release-0.0.2` .
 And that the release branch is pushed (tracked) in origin, else you'll get `does not track anything` tbump error.
 
 #### Build the Changelog
@@ -59,19 +58,19 @@ And that the release branch is pushed (tracked) in origin, else you'll get `does
 Add `--yes` when running in CI/CD to avoid stdin questions:
 
 ```sh
-towncrier build --version "0.0.1" --draft  # test first
-towncrier build --version "0.0.1"          # final
+towncrier build --version "0.0.2" --draft  # test first
+towncrier build --version "0.0.2"          # final
 ```
 
 #### Manual tbump release
 
-Finally bump with `tbump "0.0.1"` , this will also publish to <https://pypi.org/project/slurmops>
+Finally bump with `tbump "0.0.2"` , this will also publish to <https://pypi.org/project/slurmops>
 
 #### Additional notes on tbump
 
-If you want to bump the version locally, without creating a git tag use `tbump "0.0.1" --only-patch`
+If you want to bump the version locally, without creating a git tag use `tbump "0.0.2" --only-patch`
 
-However the version bumping is currently automated in CI/CD via `tbump "0.0.1" --non-interactive`
+However the version bumping is currently automated in CI/CD via `tbump "0.0.2" --non-interactive`
 
 ### Build and publish the new version to PyPI
 

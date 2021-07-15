@@ -1,0 +1,15 @@
+---
+# Fixed: [701] No 'galaxy_info' found
+galaxy_info:
+  author: Doug Holt
+  description: "https://github.com/DeepOps/easybuild_files"
+  company: AnsibleWorks
+  license: BSD
+  min_ansible_version: 1.4
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - bionic
+dependencies:
+  - { role: easy_build }

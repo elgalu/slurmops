@@ -1,0 +1,27 @@
+# Fixes: No package matching 'cuda-drivers-465' is available
+- hosts: all
+  become: true
+  tasks:
+    - name: add nvidia cuda apt key
+      ansible.builtin.apt_key:
+        url: "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub"
+        id: 7fa2af80
+        state: present
+
+    - name: add nvidia ml apt key
+      ansible.builtin.apt_key:
+        url: "http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub"
+        id: 7fa2af80
+        state: present
+
+    - name: add nvidia cuda apt repo source
+      ansible.builtin.apt_repository:
+        repo: "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /"
+        filename: nvidia-cuda
+        state: present
+
+    - name: add nvidia ml apt repo source
+      ansible.builtin.apt_repository:
+        repo: "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /"
+        filename: nvidia-cudnn
+        state: present

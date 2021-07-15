@@ -1,0 +1,10 @@
+---
+- name: restart rpcbind
+  service:
+    name: rpcbind
+    state: restarted
+
+- name: restart nfs
+  service:
+    name: "{{ nfs_server_daemon }}"
+    state: restarted

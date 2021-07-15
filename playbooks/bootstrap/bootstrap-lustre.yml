@@ -1,0 +1,27 @@
+# Fixes: No package matching 'cuda-drivers-465' is available
+- hosts: all
+  become: true
+  tasks:
+    - name: add lustre client apt key
+      ansible.builtin.apt_key:
+        url: "https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc"
+        # gpg --show-keys lustre.asc #=> 9C36DD9C515F10DBC3AA835C5D5CCC3383A962E1
+        id: 9C36DD9C515F10DBC3AA835C5D5CCC3383A962E1
+        state: present
+
+    - name: add lustre client apt repo source
+      ansible.builtin.apt_repository:
+        repo: "deb https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu focal main"
+        filename: fsxlustreclientrepo
+        state: present
+
+    - name: confirm python 3 libraries are present
+      package:
+        name:
+          - "lustre-client-modules-aws"
+          - "lustre-client-modules-{{ aws_kernel }}"
+        state: present
+# TODO: test
+# sudo modprobe -v lnet
+# sudo modprobe -v lustre
+# sudo lustre_rmmod ;echo $?

@@ -1,0 +1,130 @@
+---
+- include: bootstrap/bootstrap-python.yml
+- include: bootstrap/bootstrap-ssh.yml
+- include: bootstrap/bootstrap-sudo.yml
+
+- include: nvidia-software/nvidia-driver.yml
+- include: container/nvidia-docker.yml
+
+- include: nvidia-software/nvidia_dcgm.yml
+  when: install_dcgm|default(false)
+
+- hosts: all
+  become: true
+  tasks:
+    - name: ensure docker pip package is installed
+      pip:
+        name: "docker"
+        state: present
+
+    - name: pull CUDA container
+      docker_container:
+        name: gpu-test-pull
+        image: "{{ ngc_ready_cuda_container }}"
+        auto_remove: yes
+        pull: yes
+      tags:
+        - test
+        - never
+
+    - name: test CUDA container
+      docker_container:
+        name: gpu-test
+        image: "{{ ngc_ready_cuda_container }}"
+        detach: no
+        command: nvidia-smi -L
+      register: cuda
+      tags:
+        - test
+        - never
+
+    - name: functional test output
+      debug:
+        var: cuda.ansible_facts.docker_container.Output
+      tags:
+        - test
+        - never
+
+    - name: remove CUDA container
+      docker_container:
+        name: gpu-test
+        state: absent
+      tags:
+        - test
+        - never
+
+    - name: pull pytorch container
+      docker_container:
+        name: pytorch-pull
+        image: "{{ ngc_ready_pytorch }}"
+        auto_remove: yes
+        pull: yes
+      tags:
+        - test
+        - never
+
+    - name: test pytorch
+      docker_container:
+        name: pytorch
+        image: "{{ ngc_ready_pytorch }}"
+        working_dir: /opt/pytorch/examples/upstream/mnist
+        detach: no
+        network_mode: host
+        command: "python main.py"
+      register: pytorch
+      tags:
+        - test
+        - never
+
+    - name: pytorch test output
+      debug:
+        var: pytorch.ansible_facts.docker_container.Output
+      tags:
+        - test
+        - never
+
+    - name: remove pytorch container
+      docker_container:
+        name: pytorch-test
+        state: absent
+      tags:
+        - test
+        - never
+
+    - name: pull tensorflow container
+      docker_container:
+        name: tensorflow-pull
+        image: "{{ ngc_ready_tensorflow }}"
+        auto_remove: yes
+        pull: yes
+      tags:
+        - test
+        - never
+
+    - name: test tensorflow
+      docker_container:
+        name: tensorflow
+        image: "{{ ngc_ready_tensorflow }}"
+        working_dir: /opt/tensorflow/tensorflow/examples/tutorials/mnist
+        detach: no
+        network_mode: host
+        command: "python mnist_with_summaries.py"
+      register: tensorflow
+      tags:
+        - test
+        - never
+
+    - name: tensorflow test output
+      debug:
+        var: tensorflow.ansible_facts.docker_container.Output
+      tags:
+        - test
+        - never
+
+    - name: remove tensorflow container
+      docker_container:
+        name: tensorflow-test
+        state: absent
+      tags:
+        - test
+        - never

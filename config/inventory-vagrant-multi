@@ -1,0 +1,78 @@
+#
+# Server Inventory File for Vagrant (testing)
+#
+# Ansible works against multiple systems in your infrastructure at the same time by selecting portions of systems
+# listed in this inventory file, which defaults to being saved in the location /etc/ansible/hosts however you
+# can specify a different inventory file using `-i ./config/inventory`
+#
+# The headings in brackets are group names, which are used in classifying systems and
+# deciding what systems you are controlling at what times and for what purpose.
+#
+# It is ok to put systems in more than one group, for instance a server could be both a webserver and a dbserver.
+#
+# Define per-group or per-host configuration in group_vars/*.yml
+
+################################################################################
+# ALL NODES
+################################################################################
+# Use existing hostnames here, DeepOps will configure server hostnames to match these values
+# Every host will always belong to at least 2 groups (all and ungrouped or all and some other group)
+[all]
+#bm1-lxslurm38 ansible_host=10.180.22.38
+#bm1-lxslurm39 ansible_host=10.180.22.39
+slurm-head01 ansible_host=172.31.24.3 ip=172.31.24.3
+slurm-head02 ansible_host=172.31.24.4 ip=172.31.24.4
+slurm-login01 ansible_host=172.31.24.5 ip=172.31.24.5
+slurm-login02 ansible_host=172.31.24.6 ip=172.31.24.6
+slurm-cache01 ansible_host=172.31.24.7 ip=172.31.24.7
+slurm-cache02 ansible_host=172.31.24.8 ip=172.31.24.8
+slurm-metric01 ansible_host=172.31.24.9 ip=172.31.24.9
+cpu-1-50 ansible_host=172.31.24.50 ip=172.31.24.50
+cpu-1-51 ansible_host=172.31.24.51 ip=172.31.24.51
+a100-8-100 ansible_host=172.31.24.100 ip=172.31.24.100
+
+################################################################################
+# SLURM
+################################################################################
+[slurm-head]
+slurm-head01
+slurm-head02
+
+[slurm-login]
+slurm-login01
+slurm-login02
+
+[slurm-metric]
+slurm-metric01
+
+[slurm-cache]
+slurm-cache01
+slurm-cache02
+
+[slurm-node-cpu]
+cpu-1-[50:51]
+
+[slurm-node-gpu]
+a100-8-[100:100]
+
+[slurm-node:children]
+slurm-node-cpu
+slurm-node-gpu
+
+[slurm-cluster:children]
+slurm-head
+slurm-node
+slurm-login
+slurm-metric
+slurm-cache
+
+[vagrant:children]
+slurm-cluster
+
+################################################################################
+# SSH connection configuration
+################################################################################
+[all:vars]
+ansible_user=vagrant
+ansible_ssh_private_key_file='~/.ssh/id_rsa'
+# Not needed: ansible_password=vagrant

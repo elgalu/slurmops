@@ -1,0 +1,48 @@
+################################################################################
+# ALL NODES
+################################################################################
+[all]
+slurm-single ansible_host=10.151.10.10 ip=10.151.10.10
+
+################################################################################
+# SLURM
+################################################################################
+[slurm-head]
+slurm-single
+
+[slurm-login]
+slurm-single
+
+[slurm-metric]
+slurm-single
+
+[slurm-cache]
+slurm-single
+
+[slurm-node-cpu]
+
+[slurm-node-gpu]
+slurm-single
+
+[slurm-node:children]
+slurm-node-cpu
+slurm-node-gpu
+
+[slurm-cluster:children]
+slurm-head
+slurm-node
+slurm-login
+slurm-metric
+slurm-cache
+
+[aws:children]
+slurm-cluster
+
+################################################################################
+# SSH connection configuration
+################################################################################
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file='~/.ssh/id_rsa'
+# SSH bastion/jumpbox
+#ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -q ubuntu@172.31.24.1"'

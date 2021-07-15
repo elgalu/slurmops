@@ -1,0 +1,8 @@
+---
+- name: "reload {{ item }}"
+  service:
+    name: "{{ item }}"
+    state: restarted
+  with_items:
+    - "docker"
+    - "systemd-resolved"

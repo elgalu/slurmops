@@ -1,0 +1,261 @@
+# Defaults found at roles/slurm/defaults/main.yml
+
+################################################################################
+# Slurm                                                                        #
+################################################################################
+# Slurm job scheduler configuration
+# Playbook: slurm, slurm-cluster, slurm-perf, slurm-perf-cluster, slurm-validation
+# See: roles/slurm/defaults/main.yml
+slurm_version: 20.11.7
+slurm_install_prefix: /usr/local
+# PMI Exascale (PMIx) is designed to support clusters up to and including exascale sizes
+# https://github.com/openpmix/openpmix
+# PMI is most commonly utilized to bootstrap MPI processes.
+# PMI enables Resource Managers (like Slurm) to use their infrastructure to
+# implement advanced support for MPI application.
+# https://slurm.schedmd.com/SLUG15/PMIx.pdf
+# Either:
+#    srun –mpi=pmix .
+# Or set PMIx plugin as the default in slurm.conf file:
+#    MpiDefault = pmix
+pmix_install_prefix: /opt/deepops/pmix
+# Portable Hardware Locality (hwloc) for discovering hardware resources in parallel architectures.
+# e.g. two tasks that tightly cooperate should probably be placed onto cores sharing a cache.
+# e.g. two independent memory-intensive tasks should better be spread out onto different
+#      sockets so as to maximize their memory throughput.
+# https://www.open-mpi.org/projects/hwloc/
+# https://github.com/open-mpi/hwloc
+hwloc_install_prefix: /opt/deepops/hwloc
+# slurm_user_home: /local/slurm
+slurm_cluster_name: zlab
+
+# Maximum run time limit for jobs. Format is minutes, minutes:seconds, hours:minutes:seconds, days-hours,
+# days-hours:minutes, days-hours:minutes:seconds or "UNLIMITED". Time resolution is one minute and second
+# values are rounded up to the next minute. This limit does not apply to jobs executed by SlurmUser or user root.
+# Sets: MaxTime={{ slurm_max_job_timelimit }}
+# Default: INFINITE
+slurm_max_job_timelimit: "7-00:00"
+
+# Run time limit used for jobs that don't specify a value. If not set then MaxTime will be used.
+# Format is the same as for MaxTime.
+# Sets: DefaultTime={{ slurm_default_job_timelimit }}
+# Default: {slurm_max_job_timelimit}
+slurm_default_job_timelimit: "7-00:00"
+
+# Ensure hosts file generation only runs across slurm cluster
+# TODO: where is this used?
+hosts_add_ansible_managed_hosts_groups: ["slurm-cluster"]
+
+# Enable Slurm high-availability mode
+# NOTE: The location for Slurm saved state needs to reside in a location shared by all Slurm controller nodes
+#       Ideally this is on external NFS server and not the primary control node, since its failure
+#       would also take down that NFS share
+# TODO: enable HA
+slurm_enable_ha: true
+slurm_ha_state_save_location: "/sw/slurm"
+
+# Slurm configuration is auto-generated from templates in the `slurm` role.
+# If you want to override any of these files with custom config files, please
+# set the following vars to the absolute path of your custom files.
+#
+# slurm_conf_template: "/path/to/slurm.conf"
+# slurm_cgroup_conf_template: "/path/to/cgroup.conf"
+# slurm_gres_conf_template: "/path/to/gres.conf"
+# slurm_dbd_conf_template: "/path/to/slurmdbd.conf"
+
+################################################################################
+# Networking
+################################################################################
+# For Vagrant virtual cluster, ensure hosts file correctly uses private network
+# e.g. eth0 inet 192.168.121.155
+# e.g. eth1 inet 172.31.24.2
+hosts_network_interface: "eth1"
+
+################################################################################
+# Login on compute
+################################################################################
+slurm_login_on_compute: false
+
+################################################################################
+# Free space
+################################################################################
+# Perform cleanup tasks during the install to minimize disk space impact
+hpcsdk_clean_up_tarball_after_extract: true
+hpcsdk_clean_up_temp_dir: true
+slurm_build_dir_cleanup: false
+
+################################################################################
+# Optional installs                                                            #
+################################################################################
+slurm_configure_etc_hosts: true
+dns_mode: none
+slurm_cluster_install_cuda: true
+slurm_cluster_install_nvidia_driver: true
+slurm_cluster_install_singularity: true
+
+################################################################################
+# NFS                                                                          #
+################################################################################
+# Default exports:
+# - /home: shared home directories, needed for Open OnDemand and best practice
+# - /sw:   shared space for software installs, used for Spack or EasyBuild
+# nfs_exports:
+#   - path: /home
+#     options: "*(rw,sync,no_root_squash)"
+#   - path: /sw
+#     options: "*(rw,sync,no_root_squash)"
+# nfs_mounts:
+#   - mountpoint: /home
+#     server: '{{ groups["slurm-head"][0] }}'
+#     path: /home
+#     options: async,vers=3
+#   - mountpoint: /sw
+#     server: '{{ groups["slurm-head"][0] }}'
+#     path: /sw
+#     options: async,vers=3
+
+# Flags for enable/disable of NFS deployment
+#  - Set up an NFS server on nfs-server?
+slurm_enable_nfs_server: false
+#  - Mount NFS filesystems on nfs-clients?
+slurm_enable_nfs_client_nodes: false
+
+# Inventory host groups to use for NFS server or clients
+# nfs_server_group: "slurm-head[0]"
+# nfs_client_group: "slurm-head[1:],slurm-node"
+
+################################################################################
+# SOFTWARE MODULES (SM)                                                        #
+#   May be built with either EasyBuild or Spack                                #
+################################################################################
+slurm_install_lmod: true
+
+# Note: the sm_prefix must be in an NFS-shared location
+sm_prefix: "/sw"
+
+# Easybuild-specific
+sm_module_root: "{{ sm_prefix }}/modules"
+sm_software_path: "{{ sm_prefix }}/software"
+sm_files_path: "{{ sm_prefix }}/easybuild_files"
+sm_sources_path: "{{ sm_prefix }}/sources"
+sm_build_path: "{{ sm_prefix }}/build"
+sm_files_url: "https://github.com/DeepOps/easybuild_files.git"
+sm_install_default: true
+sm_module_path: "{{ sm_module_root }}/all"
+
+# Spack-specific
+spack_install_dir: "{{ sm_prefix }}/spack"
+spack_build_packages: false # TODO: true?
+# TODO: put newer packages, is this even used?
+spack_default_packages:
+  - "cuda@11.2.152"
+  - "openmpi@4.1.1 +cuda +pmi schedulers=auto"
+
+# Which host should we run installs on for software going into the NFS share?
+sm_install_host: "slurm-head[0]"
+
+################################################################################
+# NVIDIA HPC SDK                                                               #
+################################################################################
+slurm_install_hpcsdk: true
+
+# Select the version of HPC SDK to download
+hpcsdk_major_version: "21"
+hpcsdk_minor_version: "3"
+hpcsdk_file_cuda: "11.2"
+hpcsdk_arch: "x86_64"
+
+# In a Slurm cluster, default to setting up HPC SDK as modules rather than in
+# the default user environment
+hpcsdk_install_as_modules: true
+hpcsdk_install_in_path: false
+
+################################################################################
+# OpenMPI build                                                                #
+#                                                                              #
+# The openmpi.yml playbook will build a custom-configured OpenMPI based on the #
+# Slurm, PMIx, and hwloc on the cluster. In most cases you should be fine with #
+# using the OpenMPI provided in the HPC SDK, but if you need a custom build,   #
+# this can help you get started.
+################################################################################
+slurm_cluster_install_openmpi: false
+openmpi_version: 4.0.4
+openmpi_install_prefix: "/usr/local"
+# yamllint disable-line rule:line-length
+openmpi_configure: "./configure --prefix={{ openmpi_install_prefix }} --disable-dependency-tracking --disable-getpwuid --with-pmix={{ pmix_install_prefix }} --with-hwloc={{ hwloc_install_prefix }} --with-pmi={{ slurm_install_prefix }} --with-slurm={{ slurm_install_prefix }} --with-libevent=/usr"
+
+################################################################################
+# Open OnDemand                                                                #
+################################################################################
+# TODO: Check ood_wrapper/defaults/main.yml
+# also see vscode server integration https://github.com/OSC/bc_osc_codeserver
+install_open_ondemand: true
+# OOD Linux-host adapter requires `slurm_cluster_install_singularity` to be true
+ood_install_linuxhost_adapter: true
+# has to match Slurm cluster name
+ood_cluster_name: "zlab"
+
+servername: "slurm-head01"
+httpd_port: 9050
+httpd_listen_addr_port:
+  - 9050
+httpd_use_rewrites: false
+node_uri: /node
+rnode_uri: /rnode
+
+################################################################################
+# Allow the User Permission to Set GPU Clocks                                  #
+################################################################################
+allow_user_set_gpu_clocks: false
+
+################################################################################
+# Enroot & Pyxis                                                               #
+################################################################################
+slurm_install_enroot: true
+slurm_install_pyxis: true
+slurm_pyxis_version: 0.9.1
+
+################################################################################
+# Node Health Check                                                            #
+################################################################################
+slurm_install_nhc: true
+slurm_health_check_program: "/usr/sbin/nhc"
+
+# The health check configuration generated by default in DeepOps is pretty
+# basic, and most cluster administrators will want to set up more extensive
+# NHC configurations with their local site customizations.
+# TODO: check
+# https://github.com/mej/nhc
+nhc_config: "nhc.conf.j2"
+nhc_config_template: "nhc.conf.j2"
+nhc_sysconfig_template: "sysconfig-nhc.j2"
+
+################################################################################
+# Container registry                                                           #
+################################################################################
+slurm_enable_container_registry: false
+slurm_enable_nginx_docker_cache: false
+nginx_docker_cache_hostgroup: "slurm-cache"
+nginx_docker_cache_clients: "slurm-node"
+# yamllint disable-line rule:line-length
+docker_insecure_registries: "{{ groups['slurm-head'] | map('regex_replace', '^(.*)$', '\\1:5000') | list + ['registry.local:31500'] }}"
+docker_registry_mirrors: "{{ groups['slurm-head'] | map('regex_replace', '^(.*)$', 'http://\\1:5000') | list }}"
+
+################################################################################
+# Monitoring stack                                                             #
+################################################################################
+slurm_enable_monitoring: true
+
+# Inventory host groups where cluster monitoring services will be installed
+# (Prometheus, Grafana, etc)
+slurm_monitoring_group: "slurm-metric"
+
+################################################################################
+# Logging with rsyslog                                                         #
+################################################################################
+slurm_enable_rsyslog_server: true
+slurm_enable_rsyslog_client: true
+# Ensure we use the slurm management node for syslog
+rsyslog_server_hostname: "{{ groups['slurm-head'][0] }}"
+rsyslog_client_tcp_host: "{{ rsyslog_server_hostname }}"
+rsyslog_client_group: "slurm-cluster"

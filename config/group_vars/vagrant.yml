@@ -1,0 +1,26 @@
+# --extra-vars "@/vars_files/vagrant.yml"
+running_in_aws: false
+building_ami: false
+docker_config_auths_url: false
+
+# `RuntimeDirectorySize=10%` is not enough for Pyxis(Enroot) in vagrant
+logind_conf_runtime_directory_size: 30%
+
+# TODO: Set passwords
+slurm_password: ReplaceWithASecurePasswordInTheVaultX
+# TODO: Move mariadb into the cloud; roles/slurm/tasks/controller.yml
+slurm_db_username: slurm
+slurm_db_password: AlsoReplaceWithASecurePasswordInTheVaultX
+
+# TODO: change password
+ood_default_password: "deepops***XX"
+
+chrony_config_server:
+  - "0.pool.ntp.org"
+
+# If not in the `slurm_allow_ssh_user` then the user might get:
+#   Access denied by pam_slurm_adopt: you have no active jobs on this node
+#   Connection closed by 172.31.24.10 port 22
+slurm_allow_ssh_user:
+  - root
+  - vagrant

@@ -1,0 +1,12 @@
+---
+- hosts: "{{ hostlist | default('all') }}"
+  become: true
+  tasks:
+    - name: configure grafana
+      include_role:
+        name: grafana
+  # vars:
+  #   pip_install_packages:
+  #     - name: docker
+  roles:
+    - geerlingguy.docker

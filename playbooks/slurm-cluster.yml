@@ -1,0 +1,195 @@
+---
+# Playbook to Bootstrap/Install the Slurm Cluster
+
+# Install python required for Ansible
+- include: bootstrap/bootstrap-python.yml
+
+# Set up passwordless sudo and SSH keys if needed
+- include: bootstrap/bootstrap-ssh.yml
+- include: bootstrap/bootstrap-sudo.yml
+
+# Lustre is a HPC file-system (better) than NFS
+- include: bootstrap/bootstrap-lustre.yml
+
+# The apt package `unattended-upgrades` has been removed so is no longer necessary to disable parts of it.
+# - include: generic/unattended-upgrades.yml
+
+# Disable cloud-init
+- include: generic/disable-cloud-init.yml
+  when: deepops_disable_cloud_init
+
+# Configure hostnames, /etc/hosts
+- include: generic/hosts.yml
+  # Fixed: [WARNING]: conditional statements should not include jinja2 templating delimiters
+  # such as {{ }} or {% %}. Found: {{ slurm_configure_etc_hosts | default(true) }}
+  when: slurm_configure_etc_hosts|default(true)
+  tags:
+    - set-etc-hosts
+
+# Configure Chrony (NTP) sync
+- include: generic/chrony-client.yml
+  when: chrony_install
+
+# Set up docker on all hosts
+- include: container/docker.yml
+  when: docker_install|default(true)
+
+# TODO: Set up docker_rootless on compute nodes
+# curl -sSL https://get.docker.com/rootless | sh
+# https://download.docker.com/linux/ubuntu/dists/focal/pool/stable/amd64/docker-ce-rootless-extras_20.10.7~3-0~ubuntu-focal_amd64.deb
+# - include: container/docker_rootless.yml
+
+# Set up a local cluster container registry
+- include: container/standalone_container_registry.yml hostlist=slurm-head
+  when: slurm_enable_container_registry|default(false)
+
+# Set up NGINX-based container caching
+# - include: container/nginx-docker-registry-cache-server.yml
+#   vars:
+#     hostlist: "{{ nginx_docker_cache_hostgroup | default('slurm-head') }}"
+#   when: slurm_enable_nginx_docker_cache | default(false)
+# - include: container/nginx-docker-registry-cache-client.yml
+#   vars:
+#     hostlist: "{{ nginx_docker_cache_clients | default('slurm-node') }}"
+#   when: slurm_enable_nginx_docker_cache | default(false)
+
+# Fixes: No package matching 'cuda-drivers-465' is available
+- include: bootstrap/bootstrap-gpu.yml
+# Install NVIDIA driver (galaxy outdated playbook)
+- include: nvidia-software/nvidia-driver.yml
+  when: slurm_cluster_install_nvidia_driver|default(true)
+
+# Install NVIDIA CUDA Toolkit
+#   Note: the CUDA playbook also installs the driver, so we pass the
+#   appropriate flag to this playbook as well.
+- include: nvidia-software/nvidia_cuda.yml
+  vars:
+    cuda_playbook_install_driver: "{{ slurm_cluster_install_nvidia_driver }}"
+  when: >
+    (
+      slurm_cluster_install_cuda|default(true) and
+      nvidia_driver_force_install|default(false)
+    )
+      or
+    (
+      cuda_playbook_install_driver|default(true) and
+      ansible_local['gpus'].count is defined and
+      ansible_local['gpus']['count']
+    )
+
+# Install software
+- include: generic/software.yml
+
+# Set up NFS filesystem
+# - include: generic/nfs-server.yml
+#   vars:
+#     hostlist: "{{ nfs_server_group | default('slurm-head[0]') }}"
+#   when: slurm_enable_nfs_server
+
+- include: generic/nfs-client.yml
+  vars:
+    # Deleted: slurm-head[1:],
+    hostlist: "{{ nfs_client_group | default('slurm-node') }}"
+  when: slurm_enable_nfs_client_nodes
+
+# Install DCGM
+- include: nvidia-software/nvidia_dcgm.yml hostlist=slurm-node-gpu
+  when: install_dcgm|default(false)
+
+# Install Node Health Check
+- include: slurm-cluster/nhc.yml hostlist=slurm-node
+  when: slurm_install_nhc|default(false)
+
+# Install Slurm
+- include: slurm-cluster/slurm.yml
+
+# Install OpenMPI
+- include: slurm-cluster/openmpi.yml
+  when: slurm_cluster_install_openmpi|default(true)
+
+# Install Lmod
+- include: slurm-cluster/lmod.yml
+  when: slurm_install_lmod
+
+# Install the NVIDIA HPC SDK
+- include: nvidia-software/nvidia_hpc_sdk.yml
+  vars:
+    # Fixed: [206] Variables should have spaces before and after: {{ var_name }}
+    hostlist: "{{ sm_install_host | default('slurm-head[0]') }}"
+  when: slurm_install_hpcsdk
+
+# Install monitoring services
+- include: slurm-cluster/prometheus.yml
+  vars:
+    hostlist: "{{ slurm_monitoring_group | default('slurm-head[0]') }}"
+  when: slurm_enable_monitoring
+- include: slurm-cluster/grafana.yml
+  vars:
+    hostlist: "{{ slurm_monitoring_group | default('slurm-head[0]') }}"
+  when: slurm_enable_monitoring
+
+# Install monitoring exporters
+- include: slurm-cluster/prometheus_slurm_exporter.yml
+  vars:
+    hostlist: "{{ slurm_monitoring_group | default('slurm-head[0]') }}"
+  when: slurm_enable_monitoring
+- include: slurm-cluster/prometheus_node_exporter.yml
+  when: slurm_enable_monitoring
+- include: slurm-cluster/nvidia_dcgm_exporter.yml
+  when: slurm_enable_monitoring
+
+# Set up rsyslog forwarding from compute nodes to head node
+- include: generic/rsyslog_server.yml
+  vars:
+    hostlist: "{{ rsyslog_server_hostname | default('slurm-head[0]') }}"
+  when: slurm_enable_rsyslog_server|default(true)
+
+- include: generic/rsyslog_client.yml
+  vars:
+    hostlist: "{{ rsyslog_client_group | default('slurm-node') }}"
+  when: slurm_enable_rsyslog_client|default(true)
+
+# Install Singularity
+- include: container/singularity.yml
+  when: slurm_cluster_install_singularity|default(true)
+
+# TODO: Install Open OnDemand (currently incompatible with Ansible 2.9)
+# - include: slurm-cluster/open-ondemand.yml
+#   when: install_open_ondemand
+
+# Set Permissions to adjust GPU Clocks speeds
+- include: utilities/gpu-clocks.yml
+  when: allow_user_set_gpu_clocks
+
+# Install Enroot and Pyxis
+- include: container/pyxis.yml
+  when:
+    - slurm_install_enroot
+    - slurm_install_pyxis
+  tags:
+    - pyxis
+# Ensure that nv_peer_mem is loaded
+# TODO: Check if AWS Ubuntu deep learning AMI comes with this
+#       else this might only be a DGX package
+#
+#       Check with:
+#       modprobe nv_peer_mem
+#
+# - include: nvidia-software/nvidia_peer_memory.yml
+#   tags:
+#     - nvidia_peer_memory
+
+# Add all misc/unsorted packages here
+- include: generic/additional_packages.yml
+
+# Setup/update allowed users
+- include: generic/users.yml
+
+# Mainly AWS settings, learned from kubernetes-on-ubuntu
+- include: container/slurm-on-ubuntu.yml
+
+# Last playbook, last actions
+- include: final.yml
+
+# Enable when debugging
+- include: debug.yml

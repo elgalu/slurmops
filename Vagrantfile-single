@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# VAGRANT_VAGRANTFILE=Vagrantfile-single vagrant up
+eval File.read("./Vagrantfile-common.rb")
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config = vagrant_init_common(config)
+
+  config.vm.define "slurm-single" do |gpu|
+    gpu.vm.provider :libvirt do |v|
+      v = set_gpu_libvirt_settings(v)
+      v.memory = 92160 # 90 GB of RAM
+      v.cpus = 6
+    end
+    gpu.vm.network :private_network, ip: "172.31.24.10"
+  end
+
+  config = vagrant_finish_common(config)
+end

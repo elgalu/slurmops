@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+# VAGRANT_VAGRANTFILE=Vagrantfile-multi vagrant up
+eval File.read("./Vagrantfile-common.rb")
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config = vagrant_init_common(config)
+
+  # Default VM provider and default RAM/CPUs
+  config.vm.provider :libvirt do |libvirt_all|
+    libvirt_all.memory = 6144
+    libvirt_all.cpus = 2
+  end
+
+  config.vm.define "slurm-head01" do |mgmt|
+    mgmt.vm.network :private_network, ip: "172.31.24.3"
+  end
+
+  config.vm.define "slurm-head02" do |mgmt|
+    mgmt.vm.network :private_network, ip: "172.31.24.4"
+  end
+
+  config.vm.define "slurm-login01" do |login|
+    login.vm.network :private_network, ip: "172.31.24.5"
+  end
+
+  config.vm.define "slurm-login02" do |login|
+    login.vm.network :private_network, ip: "172.31.24.6"
+  end
+
+  config.vm.define "slurm-cache01" do |cache|
+    cache.vm.network :private_network, ip: "172.31.24.7"
+  end
+
+  config.vm.define "slurm-cache02" do |cache|
+    cache.vm.network :private_network, ip: "172.31.24.8"
+  end
+
+  config.vm.define "slurm-metric01" do |metric|
+    metric.vm.network :private_network, ip: "172.31.24.9"
+  end
+
+  config.vm.define "cpu-1-50" do |cpu|
+    cpu.vm.network :private_network, ip: "172.31.24.50"
+  end
+
+  config.vm.define "cpu-1-51" do |cpu|
+    cpu.vm.provider "libvirt" do |v|
+      v.memory = 2048
+      v.cpus = 1
+    end
+    cpu.vm.network :private_network, ip: "172.31.24.51"
+  end
+
+  config.vm.define "a100-8-100" do |gpu|
+    gpu.vm.provider :libvirt do |v|
+      v = set_gpu_libvirt_settings(v)
+    end
+    gpu.vm.network :private_network, ip: "172.31.24.100"
+  end
+
+  config = vagrant_finish_common(config)
+end

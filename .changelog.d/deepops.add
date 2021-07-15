@@ -1,0 +1,3 @@
+* Extract Vagrantfile from NVIDIA/DeepOps/virtual/Vagrantfile-ubuntu20.04-large-slurm.
+* Extract Ansible config and provisioning code from NVIDIA/DeepOps.
+* Remove RedHat from provisioning code and leave only Ubuntu 20.04 code.

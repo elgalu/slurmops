@@ -1,0 +1,89 @@
+---
+# Install NVIDIA CUDA (and driver if present)
+
+# - hosts: slurm-node-gpu
+- hosts: all
+  become: true
+  tasks:
+    - name: install custom facts
+      include_role:
+        name: facts
+
+    # TODO: this is too simple, we need to pin&control driver upgrades
+    - name: install nvidia driver
+      include_role:
+        name: nvidia.nvidia_driver
+      # when: >
+      #   nvidia_driver_force_install|default(false) or
+      #   (
+      #     cuda_playbook_install_driver|default(true) and
+      #     ansible_local['gpus'].count is defined and
+      #     ansible_local['gpus']['count']
+      #   )
+
+    - name: install nvidia cuda toolkit
+      include_role:
+        name: nvidia_cuda
+      # when: >
+      #   nvidia_driver_force_install|default(false) or
+      #   (
+      #     cuda_playbook_install_driver|default(true) and
+      #     ansible_local['gpus'].count is defined and
+      #     ansible_local['gpus']['count']
+      #   )
+
+    - name: GPU Box | Install CUDA, libcudnn8 and friends
+      ansible.builtin.package:
+        name:
+          - "{{ cuda_version }}"
+          # Pin CUDA 11-2 to match TF & PyTorch CUDA support
+          - "libcudnn8=8.1.1.33-1+cuda11.2"
+          - "libcudnn8-dev=8.1.1.33-1+cuda11.2"
+          - "libnccl2=2.8.4-1+cuda11.2"
+          - "libnccl-dev=2.8.4-1+cuda11.2"
+          # Channel for Ubuntu 20.04 doesn't have nvinfer7 only version 8.
+          # e.g. pin to `=8.0.1-1+cuda11.3` if necessary
+          # - "libnvinfer8"
+          # - "libnvinfer-dev"
+          # - "libnvinfer-plugin-dev"
+          # - "libnvinfer-plugin8"
+        state: present
+      # when: >
+      #   nvidia_driver_force_install|default(false) or
+      #   (
+      #     cuda_playbook_install_driver|default(true) and
+      #     ansible_local['gpus'].count is defined and
+      #     ansible_local['gpus']['count']
+      #   )
+
+    # TODO: apply drivers hold inside the nvidia driver galaxy fork
+    - name: hold from upgrades incompatible with pinned CUDA
+      ansible.builtin.dpkg_selections:
+        name: "{{ cuda_version }}"
+        selection: hold
+
+    - name: hold from upgrades incompatible with pinned CUDA
+      ansible.builtin.dpkg_selections:
+        name: libcudnn8
+        selection: hold
+
+    - name: hold from upgrades incompatible with pinned CUDA
+      ansible.builtin.dpkg_selections:
+        name: libcudnn8-dev
+        selection: hold
+
+    - name: hold from upgrades incompatible with pinned CUDA
+      ansible.builtin.dpkg_selections:
+        name: libnccl2
+        selection: hold
+
+    - name: hold from upgrades incompatible with pinned CUDA
+      ansible.builtin.dpkg_selections:
+        name: libnccl-dev
+        selection: hold
+
+    - name: test nvidia-smi
+      ansible.builtin.command: nvidia-smi
+      changed_when: false
+      when: >
+        (ansible_local['gpus'].count is defined and ansible_local['gpus']['count'])

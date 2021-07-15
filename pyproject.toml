@@ -51,12 +51,14 @@ python = "^3.9"
 python_json_logger = "^0.1"
 # https://github.com/yaml/pyyaml
 PyYAML = "^5.1"
+# https://pypi.org/project/docker/
 # https://github.com/docker/docker-py
 docker = "^5.0.0"
 boto3 = "^1.17.99"
 # TODO: confirm if dev dependencies or not:
 requests_mock = "^1.9"
 sshpubkeys = "^3.3.1"
+ansible = "~2.9.23"
 
 [tool.poetry.dev-dependencies]
 # https://github.com/PyCQA/pylint
@@ -81,6 +83,8 @@ towncrier = "^21.3.0"
 tbump = { git = "https://github.com/dmerejkowsky/tbump.git", rev = "03988d5d2267ddd4a33b3c4196b05b7f24f0a0a4" }
 # Using notebooks for debugging + plotting
 ipykernel = "^5.5.5"
+# Pin "v4.3.7" to avoid https://github.com/ansible-community/ansible-lint/discussions/1150#discussioncomment-965587
+ansible-lint = "v4.3.7"
 
 [tool.pylint.'REPORTS']
 msg-template = "{path}:{line}: [{msg_id}({symbol}),{obj}]{msg}"
@@ -110,7 +114,7 @@ disallow_untyped_defs = true
 [tool.black]
 # https://black.readthedocs.io/en/stable/pyproject_toml.html#configuration-format
 line-length = 101
-target-version = ['py38']
+target-version = ['py39']
 include = '\.pyi?$'
 exclude = '''
 /(

@@ -1,0 +1,90 @@
+---
+# Initial bootstrap of Python 3 installation on all hosts
+- hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: install python (no proxy)
+      # using `raw` instead of shell/command executes a plain ssh operation
+      # only needed on a system without Python (i.e. to install Python)
+      # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+      raw: |
+        if test -e {{ sys_apt_py_bin_path }}; then
+          echo "INFO: Python is already at {{ sys_apt_py_bin_path }}"
+          "{{ sys_apt_py_bin_path }}" --version
+        else
+          apt -y update
+          apt install -y "python{{ sys_apt_py_ver }}"
+        fi
+
+# Install necessary Python packages for future pip and setuptools requirements
+- hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    # installs security fixes not present in image
+    # apt-get dist-upgrade -y
+    - name: apt update and upgrade packages
+      ansible.builtin.apt:
+        # 86400: do not update the apt cache more than once a day
+        cache_valid_time: 86400
+        update_cache: yes
+        # If yes or safe, performs an aptitude safe-upgrade.
+        # If full, performs an aptitude full-upgrade.
+        # If dist, performs an apt-get dist-upgrade.
+        # Note: "dist" does not upgrade a specific package, use state=latest for that.
+        upgrade: "dist"
+        state: latest
+
+    - name: Clean unwanted older stuff, might also free up /boot
+      apt:
+        autoremove: yes
+        purge: yes
+
+    - name: install python 3 and bindings
+      ansible.builtin.package:
+        name:
+          - "python{{ sys_apt_py_ver }}"
+          - "python{{ sys_apt_py_ver }}-dev"
+          - "python{{ sys_apt_py_ver }}-venv"
+          - "python3-setuptools"
+          - "python3-pkgconfig"
+          - "python3-requests"
+          - "python3-yaml"
+          - "python3-xdg"
+          - "python3-pip"
+        state: present
+
+    - name: hold from upgrades beyond our pinned Python
+      ansible.builtin.dpkg_selections:
+        name: "python{{ sys_apt_py_ver }}"
+        # selection: install/hold/deinstall/purge
+        selection: hold
+
+    - name: hold from upgrades beyond our pinned Python
+      ansible.builtin.dpkg_selections:
+        name: "python{{ sys_apt_py_ver }}-dev"
+        selection: hold
+
+    - name: default python should be the pinned one
+      ansible.builtin.file:
+        # `src` is the already existing file/directory
+        src: "{{ sys_apt_py_bin_path }}"
+        # `path` is the symlink to create
+        path: /usr/bin/python
+        state: link
+
+    - name: default pip should be the pinned one
+      ansible.builtin.file:
+        # `src` is the already existing file/directory
+        src: /usr/bin/pip
+        # `path` is the symlink to create
+        path: /usr/bin/pip3
+        state: link
+        force: true
+# TODO: Install additional long-lived Python versions, e.g. 3.9.6
+# - hosts: all
+#   become: true
+#   tasks:
+#     - name: Install additional long-lived Python versions
+#       become: true

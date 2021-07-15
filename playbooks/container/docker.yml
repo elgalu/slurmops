@@ -1,0 +1,12 @@
+---
+# Note: the docker.service conf located at `/etc/docker/daemon.json`
+# already has by default `ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock`
+# `90-dockeropts.conf` also sets `--default-runtime=${DOCKER_RUNTIME}` at the end
+# so the user doesn't have to explicitly requests for GPUs, but we don't need that.
+- hosts: all
+  become: true
+  # vars:
+  #   pip_install_packages:
+  #     - name: docker
+  roles:
+    - geerlingguy.docker

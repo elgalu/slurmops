@@ -1,0 +1,18 @@
+---
+- name: Update settings in logind.conf that were un-commented
+  lineinfile:
+    dest: /etc/systemd/logind.conf
+    # e.g. replaces ^RemoveIPC=no ==> RemoveIPC=yes
+    regexp: "^{{ item.setting }}"
+    line: "{{ item.setting }}={{ item.value }}"
+  with_items: "{{ logind_conf }}"
+  notify: restart logind
+
+- name: Update settings in logind.conf that were commented
+  lineinfile:
+    dest: /etc/systemd/logind.conf
+    # e.g. replaces ^#RemoveIPC=no ==> RemoveIPC=yes
+    regexp: "^#{{ item.setting }}"
+    line: "{{ item.setting }}={{ item.value }}"
+  with_items: "{{ logind_conf }}"
+  notify: restart logind

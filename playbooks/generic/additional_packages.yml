@@ -1,0 +1,63 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: install additional apt packages
+      apt:
+        name:
+          - htop
+          - tree
+          - aptitude
+          # gcc and lm-sensors are glances dependencies
+          - gcc
+          - lm-sensors
+        state: present
+
+    - name: additional apt packages from slurm-on-ubuntu
+      apt:
+        name:
+          - "awscli"
+          - "bpfcc-tools"
+          - "bridge-utils"
+          - "conntrack"
+          - "dstat"
+          # ebtables enables transparent filtering of network traffic passing through a Linux bridge.
+          - "ebtables"
+          - "ec2-instance-connect"
+          - "gdb"
+          - "grub-legacy-ec2"
+          - "hping3"
+          - "linux-tools-aws"
+          - "net-tools"
+          - "netcat"
+          - "nfs-common"
+          - "nvme-cli"
+          - "screen"
+          - "systemd-coredump"
+          - "tcptraceroute"
+          - "traceroute"
+          - "tshark"
+          - "uidmap"
+          - "nmap"
+        state: present
+
+    - name: install glances pip dependencies
+      pip:
+        name:
+          - docker
+          - psutil
+        state: present
+
+    - name: install glances
+      pip:
+        name: "glances[action,batinfo,browser,cpuinfo,docker,export,folders,gpu,graph,ip,raid,snmp,web]"
+        state: present
+
+    # https://github.com/iovisor/bpftrace/
+    # was: snap install --devmode bpftrace
+    - name: Install bpftrace High-level tracing language for Linux eBPF
+      community.general.snap:
+        name: bpftrace
+        # TODO: cmd: "snap connect bpftrace:system-trace"
+        classic: false
+        state: present

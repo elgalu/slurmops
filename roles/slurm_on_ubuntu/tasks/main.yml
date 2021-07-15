@@ -1,0 +1,178 @@
+---
+#------------------------#
+# Misc Imported Settings #
+#------------------------#
+# https://www.kernel.org/doc/Documentation/sysctl/fs.txt
+- name: Increase inotify user limit
+  ansible.posix.sysctl:
+    name: fs.inotify.max_user_watches
+    value: 100000
+    sysctl_set: yes
+
+# https://www.kernel.org/doc/Documentation/sysctl/vm.txt
+- name: Increase the maximum number of memory map areas a process, default=65536
+  ansible.posix.sysctl:
+    name: vm.max_map_count
+    value: 524288
+    sysctl_set: yes
+
+# https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+- name: Increase minimum number of entries to keep from garbage collection, default=128
+  ansible.posix.sysctl:
+    name: net.ipv4.neigh.default.gc_thresh1
+    value: 1024
+    sysctl_set: yes
+- name: Increase threshold when garbage collector becomes more aggressive about purging entries, default=512
+  ansible.posix.sysctl:
+    name: net.ipv4.neigh.default.gc_thresh2
+    value: 4096
+    sysctl_set: yes
+- name: Increase maximum number of non-PERMANENT neighbor entries allowed, default=1024
+  ansible.posix.sysctl:
+    name: net.ipv4.neigh.default.gc_thresh3
+    value: 16384
+    sysctl_set: yes
+
+# https://tldp.org/HOWTO/TCP-Keepalive-HOWTO/usingkeepalive.html
+- name: Increase how often TCP sends out keepalive messages, default=2hours
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_keepalive_time
+    # Start sending keepalives if no data was sent for 5 seconds
+    value: 5
+    sysctl_set: yes
+- name: Set how frequently the probes are send out to decide it's time to kill not responding connection
+  # Default value: 75sec i.e. connection will be aborted after ~11 minutes of retries.
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_keepalive_intvl
+    # Send keepalives every second
+    value: 1
+    sysctl_set: yes
+- name: Increase number of keepalive probes TCP sends out until it decides that the connection is broken, default=9
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_keepalive_probes
+    # Reset the connection after 10 unacknowledged keepalives (15 seconds total)
+    value: 10
+    sysctl_set: yes
+- name: Decrease number of times initial SYNs for an active TCP connection attempt will be retransmitted, default=6
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_syn_retries
+    # Time out if a TCP connection wasn't established in 15 seconds
+    value: 4
+    sysctl_set: yes
+- name: Decrease default=15 yields (a hypothetical timeout of 924.6 seconds)
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_retries2
+    # value=5 will reset the connection that has unacknowledged data in the send buffer after ~12.6 seconds.
+    # RFC 1122 recommends at least 100 seconds for the timeout, which corresponds to a value of at least 8.
+    value: 8
+    sysctl_set: yes
+
+# TODO: do we need this or is it dangerous?
+# - name: Set ip forwarding
+#   ansible.posix.sysctl:
+#     name: net.ipv4.ip_forward
+#     value: '1'
+#     sysctl_set: yes
+#     state: present
+#     reload: yes
+
+#-----------------------#
+# Directories and Files #
+#-----------------------#
+- name: ensure opt directory
+  ansible.builtin.file:
+    path: "/opt/aws/bin"
+    state: directory
+    mode: 0755
+
+- name: "create {{ item }} script"
+  template:
+    src: "templates/{{ item }}.j2"
+    dest: "/opt/aws/bin/{{ item }}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - "collect-instance-metadata.sh"
+    - "dockercfg.sh"
+    - "spot-termination-handler.py"
+
+#----------------#
+# Services Files #
+#----------------#
+- name: "configure {{ item }}.service"
+  template:
+    src: "templates/{{ item }}.service.j2"
+    dest: "/etc/systemd/system/{{ item }}.service"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - "private-ipv4"
+    - "collect-instance-metadata"
+    - "reload-kernel-config"
+    - "dockercfg"
+    - "spot-termination-handler"
+
+#-----------------------------------#
+# Unnecessary packages and services #
+#-----------------------------------#
+- name: Disable unnecessary services which slows the boot time
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    masked: yes
+    enabled: no
+  with_items:
+    - "apt-daily-upgrade.service"
+    - "apt-daily-upgrade.timer"
+    - "apt-daily-upgrade.timer"
+    - "apt-daily.service"
+    - "apt-daily.timer"
+    - "motd-news.service"
+    - "motd-news.timer"
+
+- name: remove unnecessary packages
+  ansible.builtin.apt:
+    name:
+      - "mlocate"
+      - "plymouth"
+      - "popularity-contest"
+      - "ubuntu-advantage-tools"
+      - "ubuntu-release-upgrader-core"
+      - "ubuntu-server"
+      - "ufw"
+      - "unattended-upgrades"
+      - "update-manager-core"
+    state: absent
+    purge: yes
+    autoremove: yes
+
+#----------------------#
+# New Managed Services #
+#----------------------#
+- name: "manage {{ item }} service"
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - "private-ipv4"
+
+- name: manage spot-termination-handler service
+  ansible.builtin.systemd:
+    name: spot-termination-handler
+    state: stopped
+    enabled: yes
+
+- name: "manage {{ item }} service"
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: "{{ 'started' if running_in_aws else 'stopped' }}"
+    enabled: "{{ 'yes' if running_in_aws else 'no' }}"
+  with_items:
+    - "reload-kernel-config"
+    - "dockercfg"
+    - "collect-instance-metadata"
+  notify:
+    - reload docker

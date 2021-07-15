@@ -1,0 +1,78 @@
+#
+# ansible role to install lmod:
+#
+---
+- name: "install packages"
+  become: true
+  apt:
+    name:
+      - bash
+      - tcsh
+      - lmod
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: "mkdir software path"
+  become: true
+  file:
+    path: "{{ sm_software_path }}"
+    state: directory
+    mode: 0755
+
+- name: "mkdir module path"
+  become: true
+  file:
+    path: "{{ sm_module_path }}"
+    state: directory
+    mode: 0755
+
+- name: "configure sh profile"
+  become: true
+  template:
+    src: templates/z00_lmod.sh
+    dest: /etc/profile.d
+    owner: root
+    group: root
+    # TODO: Why permissive 0777 ?
+    mode: 0777
+  tags:
+    - configuration
+
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=891541
+- name: "bugfix for lmod posix_c"
+  become: true
+  # Fixed: [302] Using command rather than an argument to e.g. file
+  file:
+    src: /usr/lib/x86_64-linux-gnu/lua/5.{{ item }}/posix_c.so
+    dest: /usr/lib/x86_64-linux-gnu/lua/5.{{ item }}/posix.so
+    owner: root
+    group: root
+    state: link
+  with_sequence: start=1 end=3
+  when:
+    - ansible_distribution == 'Ubuntu'
+    - ansible_distribution_version == '18.04'
+
+- name: "unset previous lmod setup"
+  # TODO: check if we can switch from `shell` to `command`
+  # noqa 305 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#command-instead-of-shell
+  # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+  shell: unset MODULEPATH_ROOT
+  args:
+    executable: /bin/bash
+
+- name: "unset previous lmod setup"
+  # TODO: check if we can switch from `shell` to `command`
+  # noqa 305 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#command-instead-of-shell
+  # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+  shell: unsetenv MODULEPATH_ROOT
+  args:
+    executable: /bin/csh
+
+- name: "auto load lmod"
+  # TODO: check if we can switch from `shell` to `command`
+  # noqa 305 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#command-instead-of-shell
+  # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+  shell: source /etc/profile.d/z00_lmod.sh
+  args:
+    executable: /bin/bash

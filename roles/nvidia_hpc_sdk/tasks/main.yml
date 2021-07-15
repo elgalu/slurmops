@@ -1,0 +1,80 @@
+---
+- name: check for existing nvhpc installation
+  stat:
+    path: "{{ hpcsdk_install_dir }}/Linux_{{ hpcsdk_arch }}/{{ hpcsdk_version_dir }}/compilers/bin/localrc"
+  register: nvhpc_localrc
+
+- name: install dependencies (ubuntu)
+  apt:
+    name:
+      - "gcc"
+      - "g++"
+    state: present
+  when: not nvhpc_localrc.stat.exists
+
+- name: ensure download and install directories exist
+  when: not nvhpc_localrc.stat.exists
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: "root"
+    group: "root"
+    mode: 0755
+  with_items:
+    - "{{ hpcsdk_temp_dir }}"
+    - "{{ hpcsdk_install_dir }}"
+
+- name: download nvidia hpc sdk
+  when: not nvhpc_localrc.stat.exists
+  get_url:
+    url: "{{ hpcsdk_download_url }}"
+    dest: "{{ hpcsdk_dest_download_path }}"
+    mode: 0444
+
+- name: extract archive
+  when: not nvhpc_localrc.stat.exists
+  unarchive:
+    src: "{{ hpcsdk_dest_download_path }}"
+    dest: "{{ hpcsdk_temp_dir }}"
+    remote_src: true
+    creates: "{{ hpcsdk_temp_dir }}/{{ hpcsdk_download_name }}/install"
+
+- name: run the installer
+  when: not nvhpc_localrc.stat.exists
+  command: "./install"
+  args:
+    chdir: "{{ hpcsdk_temp_dir }}/{{ hpcsdk_download_name }}"
+    creates: "{{ hpcsdk_install_dir }}/Linux_{{ hpcsdk_arch }}/{{ hpcsdk_version_dir }}/compilers/bin/nvc"
+  environment:
+    NVHPC_SILENT: "true"
+    NVHPC_INSTALL_DIR: "{{ hpcsdk_install_dir }}"
+    NVHPC_INSTALL_TYPE: "{{ hpcsdk_install_type }}"
+    NVHPC_DEFAULT_CUDA: "{{ hpcsdk_default_cuda }}"
+
+- name: clean up the temp directory
+  file:
+    path: "{{ hpcsdk_temp_dir }}"
+    state: absent
+  when:
+    - not nvhpc_localrc.stat.exists
+    - hpcsdk_clean_up_temp_dir
+
+- name: run the makelocalrc script
+  when: not nvhpc_localrc.stat.exists
+  # Fixed [204] Lines should be no longer than 160 chars.
+  command: >
+    "{{ hpcsdk_install_dir }}/Linux_{{ hpcsdk_arch }}/{{ hpcsdk_version_dir }}/compilers/bin/makelocalrc
+     -x {{ hpcsdk_install_dir }}/Linux_{{ hpcsdk_arch }}/{{ hpcsdk_version_dir }}/compilers"
+  args:
+    creates: "{{ hpcsdk_install_dir }}/Linux_{{ hpcsdk_arch }}/{{ hpcsdk_version_dir }}/compilers/bin/localrc"
+
+- name: add profile script to add to environment
+  template:
+    src: "{{ item }}"
+    dest: "/etc/profile.d/{{ item }}"
+    owner: "root"
+    group: "root"
+    mode: 0644
+  with_items:
+    - "z95_nvhpc.sh"
+  when: hpcsdk_install_in_path

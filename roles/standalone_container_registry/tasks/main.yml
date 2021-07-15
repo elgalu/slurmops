@@ -1,0 +1,41 @@
+---
+- name: create local directory for configuration
+  file:
+    path: "{{ standalone_container_registry_config_dir }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: 0700
+
+- name: add config file
+  template:
+    src: "{{ standalone_container_registry_config_template }}"
+    dest: "{{ standalone_container_registry_config_dir }}/config.yml"
+    owner: "root"
+    group: "root"
+    mode: 0600
+
+# - name: Ensure Python 3 dependencies are installed via pip
+#   block:
+#     - name: install pip
+#       package:
+#         name: python3-pip
+#     - name: install docker
+#       pip:
+#         name: docker
+
+- name: ensure docker pip package is installed
+  pip:
+    name: "docker"
+    state: present
+
+- name: run registry docker container
+  docker_container:
+    name: "{{ standalone_container_registry_name }}"
+    image: "{{ standalone_container_registry_image }}"
+    state: started
+    network_mode: host
+    restart: yes
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ standalone_container_registry_config_dir }}/config.yml:/etc/docker/registry/config.yml"

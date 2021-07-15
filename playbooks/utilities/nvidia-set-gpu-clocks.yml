@@ -1,0 +1,17 @@
+---
+# set gpu clocks on all worker nodes
+- hosts: all
+  gather_facts: no
+  become: true
+  tasks:
+    - name: set the gpu clock to a specified amount
+      # TODO: check if we can switch from `shell` to `command`
+      # noqa 305 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#command-instead-of-shell
+      shell: "nvidia-smi -lgc {{ gpu_clock_lock }}"
+      when: not gpu_clock_reset
+
+    - name: reset the gpu clock to the default
+      # TODO: check if we can switch from `shell` to `command`
+      # noqa 305 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#command-instead-of-shell
+      shell: "nvidia-smi -rgc"
+      when: gpu_clock_reset

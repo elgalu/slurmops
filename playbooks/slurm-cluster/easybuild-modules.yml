@@ -1,0 +1,15 @@
+#
+# install software modules using EasyBuild.
+#
+---
+- hosts: all
+  roles:
+    - name: lmod
+
+- hosts: slurm-head[0]
+  roles:
+    - name: easy_build
+
+- hosts: slurm-head
+  roles:
+    - name: easy_build_packages

@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+# Authorization
+iid="instance-identity-document:$(curl --silent --fail http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)"
+iid="$(echo -n "$iid" | base64 -w 0)"
+mkdir -p /root/.docker
+cat << EOF > /root/.docker/config.json
+{
+  "auths": {
+    "{{ docker_config_auths_url }}": {
+      "auth": "${iid}"
+    }
+  }
+}
+EOF

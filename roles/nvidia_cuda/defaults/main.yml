@@ -1,0 +1,12 @@
+---
+# 'cuda' is the generic package and will pull the latest version
+cuda_version: "cuda-toolkit-11-2"
+
+# Should we install the /etc/profile.d/cuda-vars.sh script that will put
+# the CUDA toolkit binaries and libraries in the default environment?
+cuda_toolkit_add_profile_script: yes
+
+# Ubuntu
+nvidia_driver_ubuntu_cuda_repo_gpgkey_url: "https://developer.download.nvidia.com/compute/cuda/repos/{{ _ubuntu_repo_dir }}/7fa2af80.pub"
+nvidia_driver_ubuntu_cuda_repo_gpgkey_id: "7fa2af80"
+nvidia_driver_ubuntu_cuda_repo_baseurl: "https://developer.download.nvidia.com/compute/cuda/repos/{{ _ubuntu_repo_dir }}"

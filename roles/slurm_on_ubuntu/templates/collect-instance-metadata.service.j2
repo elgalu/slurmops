@@ -1,0 +1,11 @@
+[Unit]
+After=docker.service dockercfg.service private-ipv4.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/aws/bin/collect-instance-metadata.sh
+RemainAfterExit=yes
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

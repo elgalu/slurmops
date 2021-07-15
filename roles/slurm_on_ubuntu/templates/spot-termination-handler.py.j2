@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+import json
+import logging
+import socket
+import subprocess
+import time
+from typing import Optional, Any, Dict, NamedTuple
+from requests.auth import AuthBase
+
+import requests
+import yaml
+
+TTL = 1800
+DELETE_TIMEOUT = "90s"
+
+
+class IMDS:
+    def __init__(self):
+        self.token = ""
+        self.token_expires_at = 0
+
+    def api_get(self, path: str) -> requests.Response:
+        self.update_token()
+        return requests.get(
+            "{}/{}".format("http://169.254.169.254", path),
+            headers={"X-aws-ec2-metadata-token": self.token},
+            timeout=10,
+        )
+
+    def get_metadata_property(self, name: str, missing_ok=False) -> Optional[str]:
+        response = self.api_get("latest/meta-data/{}".format(name))
+        if missing_ok and response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.text
+
+    def update_token(self) -> None:
+        if self.token_expires_at < time.time():
+            response = requests.put(
+                "http://169.254.169.254/latest/api/token",
+                headers={"X-aws-ec2-metadata-token-ttl-seconds": str(TTL)},
+                timeout=10,
+            )
+            response.raise_for_status()
+
+            self.token = response.text
+            self.token_expires_at = time.time() + (TTL / 2)
+
+
+def uptime() -> float:
+    with open("/proc/uptime") as f:
+        return float(f.readline().split()[0])
+
+
+def get_termination_notice(imds: IMDS) -> Optional[str]:
+    imds_notice = imds.get_metadata_property("spot/termination-time", missing_ok=True)
+    if imds_notice is not None:
+        return imds_notice
+
+    # Check for a local trigger file in addition to IMDS. This can be used for manual testing,
+    # or in E2E tests.
+    try:
+        with open("/var/run/debug-spot-termination-notice") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
+
+
+def terminate() -> None:
+    # e.g. slurm-single-eth1
+    instance_name = socket.getfqdn()
+
+    # TODO: Drain the node so Slurm removes it from the queue
+
+    # TODO: Fetch the list of Slurm jobs ids on this node that are still running.
+    to_be_deleted = []
+
+    # Terminate the Slurm jobs
+    logging.info(
+        "%d Slurm jobs to terminate: %s",
+        len(to_be_deleted),
+        ", ".join(str(job_id) for job_id in sorted(to_be_deleted)),
+    )
+
+    # TODO: implement gracefully_terminate_slurm_job()
+    # for job_id in to_be_deleted:
+    #     gracefully_terminate_slurm_job(job_id)
+
+    # Wait for AWS to terminate this instance (up to 2mins)
+    while True:
+        time.sleep(90)
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    imds = IMDS()
+    availability_zone = imds.get_metadata_property("placement/availability-zone")
+    instance_type = imds.get_metadata_property("instance-type")
+    instance_id = imds.get_metadata_property("instance-id")
+
+    while True:
+        spot_termination_notice = get_termination_notice(imds)
+        if spot_termination_notice is not None:
+            logging.info(
+                "[az=%s type=%s id=%s uptime=%.03f] received spot termination notice: %s",
+                availability_zone,
+                instance_type,
+                instance_id,
+                uptime(),
+                spot_termination_notice,
+            )
+            terminate()
+        time.sleep(5)
+
+
+if __name__ == "__main__":
+    main()

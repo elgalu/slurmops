@@ -1,0 +1,116 @@
+#
+# DISABLED: This playbook is currently not in use.
+#
+- hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    # Note max(uid) = 65534 from user `nobody`
+    - name: Create a 'syspy' group for system users that can use system-installed python3
+      become: true
+      ansible.builtin.group:
+        name: syspy
+        state: present
+        gid: 1047
+
+# Hide system-Python from users to prevent them from creating virtual envs with a
+# Python version that can get upgraded at any time and therefore breaking their virtual envs.
+# TODO: install all alternative Python versions that the user can choose from
+#   https://hackersandslackers.com/multiple-python-versions-ubuntu-20-04/
+#   https://github.com/gforcada/ansible-compile-python/blob/4ab0e4cc06042f3a5b10d99d14115c68b8772442/defaults/main.yml
+#   https://github.com/gforcada/ansible-compile-python/blob/9c9d282eb9437d4c51125194d28977e21577a575/ansible.yml
+#   https://github.com/gforcada/ansible-compile-python/blob/9c9d282eb9437d4c51125194d28977e21577a575/tasks/deps.yml#L51
+#   Finally share the solution at:
+#     https://stackoverflow.com/questions/56293039/install-shared-pyenv-versions-available-to-all-users
+- hosts: all
+  become: true
+  tasks:
+    - name: get the username running the remote deploy
+      become: false
+      # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+      command: whoami
+      register: whoami_output
+
+    - name: Add all system users to the syspy group
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups: syspy
+        append: true
+      loop:
+        - "{{ whoami_output.stdout }}"
+        - "root"
+        - "daemon"
+        - "bin"
+        - "sys"
+        - "sync"
+        - "games"
+        - "man"
+        - "lp"
+        - "mail"
+        - "news"
+        - "uucp"
+        - "proxy"
+        - "www-data"
+        - "backup"
+        - "list"
+        - "irc"
+        - "gnats"
+        - "nobody"
+        - "systemd-network"
+        - "systemd-resolve"
+        - "systemd-timesync"
+        - "messagebus"
+        - "syslog"
+        - "_apt"
+        - "tss"
+        - "uuidd"
+        - "tcpdump"
+        - "landscape"
+        - "pollinate"
+        - "sshd"
+        - "systemd-coredump"
+        - "_chrony"
+        - "munge"
+        - "slurm"
+        - "mysql"
+
+    - name: remove all users permission to execute system Python
+      ansible.builtin.stat:
+        path: "{{ sys_apt_py_bin_path }}"
+      register: python_current
+    - name: check if rules file exists
+      ansible.builtin.file:
+        path: "{{ sys_apt_py_bin_path }}"
+        owner: root
+        group: syspy
+        state: file
+        # See final.yml for the final mode of this file.
+        mode: 0775
+      when: python_current.stat.exists
+
+# Removed from final.yml:
+- hosts: all
+  become: true
+  vars:
+    final_system_users_that_might_need_py_access:
+      - _chrony
+      - munge
+      - mysql
+      - slurm
+      - syslog
+  tasks:
+    - name: Disable normal users from using system Python
+      ansible.builtin.file:
+        path: "{{ sys_apt_py_bin_path }}"
+        owner: root
+        group: syspy
+        state: file
+        mode: 0770
+      when: python_current.stat.exists
+
+    - name: Ensure finally all relevant system users can run system's python
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups: syspy
+        append: true
+      with_items: "{{ final_system_users_that_might_need_py_access }}"

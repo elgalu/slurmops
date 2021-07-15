@@ -1,0 +1,18 @@
+---
+# un-drain nodes that are down due to an unexpected reboot during install
+# sudo scontrol update node=XXX state=idle
+# where XXX are the nodes that have changed and are marked as *down*
+- name: set nodes to idle
+  # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+  command: "scontrol update node={{ item }} state=idle"
+  register: undrain_nodes_result
+  # TODO: we shouldn't simply ignore errors
+  ignore_errors: yes
+  with_items:
+    - "{{ groups['slurm-node'] }}"
+  environment:
+    PATH: "{{ slurm_install_prefix }}/bin:{{ ansible_env.PATH }}"
+  run_once: true
+  tags:
+    - never
+    - undrain

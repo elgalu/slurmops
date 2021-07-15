@@ -1,0 +1,13 @@
+---
+- hosts: "{{ hostlist | default('all') }}"
+  become: true
+  vars:
+    # https://github.com/elgalu/ansible-role-systemd-resolved#role-variables
+    systemd_resolved_config:
+      # DNSStubListener: a DNS stub resolver will listen for UDP requests on address 127.0.0.53 port 53.
+      # If "yes" (the default), the stub listens for both UDP and TCP requests.
+      # If "no", the stub listener is disabled.
+      DNSStubListener: no
+  roles:
+    - slurm_on_ubuntu
+    - aisbergg.systemd-resolved

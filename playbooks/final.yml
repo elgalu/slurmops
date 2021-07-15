@@ -1,0 +1,64 @@
+---
+# Last playbook, last actions
+- hosts: all
+  become: true
+  vars:
+    final_harden_users_home_dir:
+      - _chrony
+      - munge
+      - mysql
+      - slurm
+      - syslog
+  tasks:
+    - name: Ensure finally all relevant system users can run system's python
+      ansible.builtin.file:
+        path: "/home/{{ item }}"
+        state: directory
+        mode: 0700
+      with_items: "{{ final_harden_users_home_dir }}"
+
+# Run only if we're building an AMI
+- hosts: all
+  become: yes
+  tasks:
+    - name: Clear the machine ID so it's regenerated next time we boot
+      ansible.builtin.copy:
+        dest: "/etc/machine-id"
+        content: ""
+        mode: 0444
+        owner: root
+        group: root
+      when: building_ami
+
+    - name: link the empty machine ID
+      ansible.builtin.file:
+        # `src` is the already existing file/directory
+        src: "/etc/machine-id"
+        # `path` is the symlink to create
+        path: "/var/lib/dbus/machine-id"
+        state: link
+        force: true
+      when: building_ami
+
+- hosts: all
+  name: "Install goss in system and run goss tests"
+  become: true
+  roles:
+    - role: "marcinpraczko.goss-install"
+      goss_dst_dir: /usr/local/bin
+  tasks:
+    - name: "copy goss tests"
+      become: false
+      template:
+        src: "../tests/goss.yaml.j2"
+        # ansible_env.HOME == "/root"
+        # lookup('env','HOME') == "/home/lgallucci"
+        # ~ == "/home/vagrant" or "/home/ubuntu"
+        dest: "~/goss.yaml"
+        owner: "{{ ansible_user }}"
+        mode: 0644
+
+    - name: "run goss tests"
+      become: false
+      command: "goss validate ~/goss.yaml --format documentation"
+      changed_when: false

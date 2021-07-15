@@ -1,0 +1,176 @@
+---
+###########################################
+# Install dependencies
+###########################################
+
+- include: setup-role.yml
+
+- name: configure alternative library path
+  # TODO: WIP switching from `template` to explicit `ansible.builtin.template`
+  # > we recommend you use the FQCN for easy linking to the module documentation
+  # and to avoid conflicting with other collections that may have the same module name.
+  ansible.builtin.template:
+    src: etc/ld.so.conf.d/slurm.conf.j2
+    dest: /etc/ld.so.conf.d/slurm.conf
+    mode: 0644
+  register: updated_slurm_ld
+
+- name: update ld cache
+  command: ldconfig
+  # https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-handler
+  # noqa 503 Tasks that run when changed should likely be handlers (not register).
+  when: updated_slurm_ld.changed
+
+- include: munge.yml
+
+- include: hwloc.yml
+  tags: hwloc
+  when: slurm_include_hwloc
+
+- include: pmix.yml
+  tags: pmix
+  when: slurm_include_pmix
+
+###########################################
+# Build Slurm
+###########################################
+- name: default to building slurm
+  set_fact:
+    slurm_build: yes
+    slurm_upgrade: no
+    slurm_downgrade: no
+
+- name: check installed slurm version
+  # noqa 301 https://ansible-lint.readthedocs.io/en/latest/default_rules.html#no-changed-when
+  shell: "{{ slurm_install_prefix }}/sbin/slurmd --version | awk '{print $2}'"
+  register: slurmd_reported_version
+  ignore_errors: yes
+
+- name: don't build slurm if it's already installed, unless forced
+  set_fact:
+    slurm_build: no
+  when: slurmd_reported_version.stdout == slurm_version and not slurm_force_rebuild
+
+- name: upgrade?
+  set_fact:
+    slurm_upgrade: yes
+  when: slurmd_reported_version.stdout and slurmd_reported_version.stdout is version(slurm_version, '<')
+
+- name: downgrade?
+  set_fact:
+    slurm_downgrade: yes
+  when: slurmd_reported_version.stdout and slurmd_reported_version.stdout is version(slurm_version, '>')
+
+- name: going to rebuild slurm?
+  debug:
+    msg: "Rebuild Slurm? {{ slurm_build }}"
+
+- name: install build dependencies
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    # 86400: do not update the apt cache more than once a day
+    cache_valid_time: 86400
+    update_cache: yes
+  with_items: "{{ slurm_build_deps }}"
+
+- name: remove slurm packages
+  apt:
+    name:
+      - slurm
+      - slurm-wlm
+      - slurmctld
+      - slurmdbd
+      - slurmd
+    state: absent
+  ignore_errors: false
+
+- name: make build directory
+  file:
+    path: "{{ slurm_build_dir }}"
+    state: directory
+    mode: 0755
+  when: slurm_build
+
+- name: download source
+  unarchive:
+    src: "{{ slurm_src_url }}"
+    remote_src: yes
+    dest: "{{ slurm_build_dir }}"
+    extra_opts:
+      - --strip-components=1
+  when: slurm_build
+
+- name: clean src dir
+  command: make distclean
+  args:
+    chdir: "{{ slurm_build_dir }}"
+  ignore_errors: yes
+  when: slurm_build
+
+- name: configure
+  command: "{{ slurm_configure }}"
+  args:
+    chdir: "{{ slurm_build_dir }}"
+  when: slurm_build
+
+- name: build
+  shell: "make -j$(nproc) > build.log 2>&1"
+  args:
+    chdir: "{{ slurm_build_dir }}"
+  when: slurm_build
+
+- name: build contrib
+  shell: "make -j$(nproc) contrib >> build.log 2>&1"
+  args:
+    chdir: "{{ slurm_build_dir }}"
+  when: slurm_build
+
+- name: install
+  shell: "make -j$(nproc) install >> build.log 2>&1"
+  args:
+    chdir: "{{ slurm_build_dir }}"
+  when: slurm_build
+  notify:
+    - restart slurmd
+    - restart slurmdbd
+    - restart slurmctld
+
+- name: install contrib
+  shell: "make -j$(nproc) install-contrib >> build.log 2>&1"
+  args:
+    chdir: "{{ slurm_build_dir }}"
+  when: slurm_build
+  notify:
+    - restart slurmd
+    - restart slurmdbd
+    - restart slurmctld
+
+- name: build pam_slurm_adopt
+  shell: "make -j$(nproc) >> ../../build.log 2>&1"
+  args:
+    chdir: "{{ slurm_build_dir }}/contribs/pam_slurm_adopt"
+  when: slurm_build
+
+- name: install pam_slurm_adopt
+  shell: "make -j$(nproc) install >> ../../build.log 2>&1"
+  args:
+    chdir: "{{ slurm_build_dir }}/contribs/pam_slurm_adopt"
+  when: slurm_build
+  notify:
+    - restart slurmd
+    - restart slurmdbd
+    - restart slurmctld
+
+- name: fix library dir permissions
+  file:
+    path: "{{ slurm_install_prefix }}/lib/slurm"
+    state: directory
+    mode: 0775
+
+- name: fix deepops dir permissions
+  file:
+    path: "{{ deepops_dir }}"
+    state: directory
+    mode: 0755
+    recurse: yes

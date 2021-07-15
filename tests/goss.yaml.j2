@@ -1,0 +1,129 @@
+package:
+  openssh-server:
+    installed: true
+  apt-transport-https:
+    installed: true
+  awscli:
+    installed: true
+  bpfcc-tools:
+    installed: true
+  ca-certificates:
+    installed: true
+  curl:
+    installed: true
+  software-properties-common:
+    installed: true
+  linux-tools-common:
+    installed: true
+  ltrace:
+    installed: true
+  strace:
+    installed: true
+  rsync:
+    installed: true
+  tcpdump:
+    installed: true
+  tshark:
+    installed: true
+  conntrack:
+    installed: true
+  dstat:
+    installed: true
+  procps:
+    installed: true
+  psmisc:
+    installed: true
+  screen:
+    installed: true
+  coreutils:
+    installed: true
+  vim:
+    installed: true
+  gdb:
+    installed: true
+  sysstat:
+    installed: true
+  netcat:
+    installed: true
+  socat:
+    installed: true
+  telnet:
+    installed: true
+  hping3:
+    installed: true
+  tcptraceroute:
+    installed: true
+  traceroute:
+    installed: true
+  docker-ce:
+    installed: true
+  docker-ce-cli:
+    installed: true
+  nvidia-container-runtime:
+    installed: true
+  # `nvidia-docker2` not needed, it only registers `nvidia-container-runtime` which we already did
+  nvidia-docker2:
+    installed: false
+  jq:
+    installed: true
+  systemd-coredump:
+    installed: true
+
+port:
+  tcp:22:
+    listening: true
+    ip:
+      - 0.0.0.0
+
+service:
+  sshd:
+    enabled: true
+    running: true
+  docker:
+    enabled: true
+    running: true
+  containerd:
+    enabled: true
+    running: true
+  kubelet:
+    enabled: false
+    running: false
+  spot-termination-handler:
+    enabled: true
+    running: false
+
+file:
+  /etc/docker/daemon.json:
+    exists: true
+    owner: root
+    group: root
+    filetype: file
+    contains: ["nvidia-container-runtime"]
+  /etc/ssh/sshd_config:
+    exists: true
+  /etc/systemd/resolved.conf:
+    exists: true
+  /etc/systemd/system/collect-instance-metadata.service:
+    exists: true
+  /etc/systemd/system/dockercfg.service:
+    exists: true
+  /etc/systemd/system/private-ipv4.service:
+    exists: true
+  /etc/systemd/system/spot-termination-handler.service:
+    exists: true
+
+user:
+  {{ ansible_user }}:
+    exists: true
+    # TODO: do we need this user to belong to these?
+    # groups:
+    #   - adm
+    #   - docker
+
+process:
+  sshd:
+    running: true
+  containerd:
+    running: true
+  dockerd:
+    running: true

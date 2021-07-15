@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+
+AZ="$(curl -s --max-time 5 --fail http://169.254.169.254/latest/meta-data/placement/availability-zone)"
+REGION="${AZ%?}"
+ID="$(curl -s --max-time 5 --fail http://169.254.169.254/latest/meta-data/instance-id)"
+HOSTNAME="$(curl -s --max-time 5 --fail http://169.254.169.254/latest/meta-data/hostname)"
+ZONE="$(curl -s --max-time 5 --fail http://169.254.169.254/latest/meta-data/placement/availability-zone)"
+
+echo Initializing instance "$ID" "$HOSTNAME" "$ZONE"
+
+n=0
+until [ $n -ge 5 ]
+do
+   LIFECYCLE="$(aws --region "$REGION" ec2 describe-instances --instance-id "$ID" --output text --query 'Reservations[0].Instances[0].InstanceLifecycle')" && break
+   n=$((n+1))
+   sleep 5
+done
+
+case "$LIFECYCLE" in
+    spot)
+        IS_SPOT="true"
+        ;;
+    None)
+        IS_SPOT="false"
+        ;;
+    *)
+        echo "Unknown instance lifecycle: $LIFECYCLE"
+        exit 1
+        ;;
+esac
+
+# We use `/var/run/spot-instance` and `/var/run/spot_or_ondemand.vars` to signal this is a spot instance
+if [[ "${IS_SPOT}" == "true" ]]; then
+    touch /var/run/spot-instance
+fi
+
+cat >/var/run/spot_or_ondemand.vars <<EOF
+SPOT_LABEL=aws.amazon.com/spot=${IS_SPOT}
+EOF

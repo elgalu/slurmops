@@ -1,0 +1,11 @@
+---
+# TODO: Remove/refactor this duplicated stuff
+- name: add nvidia ml gpg key
+  ansible.builtin.apt_key:
+    url: "{{ ubuntu_nvidiaml_gpgkey }}"
+    id: "{{ ubuntu_nvidiaml_keyid }}"
+
+- name: add nvidia ml apt repo
+  ansible.builtin.apt_repository:
+    repo: "deb {{ ubuntu_nvidiaml_baseurl }} /"
+    update_cache: yes

@@ -67,10 +67,11 @@ def clean(c):  # type: ignore
     pass
 
 
-@task(aliases=["checks", "all-checks", "lint-all"])
-def hooks(c):  # type: ignore
-    """Run all pre-commit hooks on all files."""
-    c.run("poetry run pre-commit run --all-files")
+@task(aliases=["upgrade"])
+def update(c):  # type: ignore
+    """Upgrade/update packages and hooks."""
+    c.run("poetry update")
+    c.run("pre-commit autoupdate --freeze")
 
 
 @task(aliases=["pylint"])
@@ -195,3 +196,49 @@ def build_and_upload_documentation(c):  # type: ignore
         disable_indexing_for_PRs()
     else:
         print("No PR number, no need to re-generate docs at /pr/")
+
+
+@task(aliases=["ansible-clear"])
+def ansible_clear_facts(c):  # type: ignore
+    """Clear any stale fact cache in Ansible."""
+    c.run(
+        """
+        poetry run ansible -m meta -a "clear_facts" -i "./config/inventory-vagrant" all
+    """.strip()
+    )
+
+
+@task(aliases=["ansible-syntax"])
+def ansible_syntax_check(c):  # type: ignore
+    """Ansible syntax check is more permissive than ansible-lint."""
+    c.run(
+        """
+        poetry run ansible-playbook -vv \
+            --syntax-check \
+            --inventory "./config/inventory-vagrant-multi" \
+            "./playbooks/slurm-cluster.yml" \
+            "./playbooks/slurm-cluster/slurm.yml"
+    """.strip()
+    )
+
+
+@task
+def ansible_lint(c):  # type: ignore
+    """Ansible linter (deep-dive checks)."""
+    c.run(
+        """
+        poetry run pre-commit run ansible-lint --all-files
+    """.strip()
+    )
+
+
+@task(aliases=["ansible-checks"], pre=[ansible_clear_facts, ansible_syntax_check, ansible_lint])
+def ansible(c):  # type: ignore
+    """Run all Ansible checks and linters."""
+    pass
+
+
+@task(pre=[ansible_syntax_check], aliases=["checks", "all-checks", "lint-all"])
+def hooks(c):  # type: ignore
+    """Run all pre-commit hooks on all files."""
+    c.run("poetry run pre-commit run --all-files")

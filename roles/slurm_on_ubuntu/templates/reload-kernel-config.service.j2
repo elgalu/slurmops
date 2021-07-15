@@ -1,0 +1,13 @@
+[Unit]
+Requires=cloud-config.target
+After=cloud-config.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
+ExecStart=/sbin/sysctl --system
+
+[Install]
+WantedBy=multi-user.target

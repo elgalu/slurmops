@@ -1,0 +1,19 @@
+---
+- name: Autoinstall DKMS modules
+  command: dkms autoinstall
+  when: >
+    (ansible_local['gpus'].count is defined and ansible_local['gpus']['count'])
+
+- name: Modprobe nv_peer_mem
+  modprobe:
+    name: nv_peer_mem
+    state: present
+  when: >
+    (ansible_local['gpus'].count is defined and ansible_local['gpus']['count'])
+
+- name: Start nv_peer_mem service
+  service:
+    name: nv_peer_mem
+    state: started
+  when: >
+    (ansible_local['gpus'].count is defined and ansible_local['gpus']['count'])

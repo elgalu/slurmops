@@ -1,0 +1,6 @@
+---
+- hosts: "{{ hostlist | default('all') }}"
+  become: true
+  become_method: sudo
+  roles:
+    - standalone_container_registry

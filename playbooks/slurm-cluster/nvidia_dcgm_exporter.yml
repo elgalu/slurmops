@@ -1,0 +1,22 @@
+---
+- include: ../container/docker.yml
+- include: ../nvidia-software/nvidia-driver.yml
+- include: ../container/nvidia-docker.yml
+
+- hosts: "{{ hostlist | default('all') }}"
+  become: true
+  tasks:
+    - name: install custom facts module
+      include_role:
+        name: facts
+
+    - name: set GPU fact
+      # TODO: set this fact once and re-use globally
+      set_fact:
+        has_gpus: true
+      when: >
+        (ansible_local['gpus'].count is defined and ansible_local['gpus']['count'])
+
+    - name: configure dcgm exporter
+      include_role:
+        name: nvidia_dcgm_exporter

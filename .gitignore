@@ -103,9 +103,22 @@ ENV/
 # idea
 .idea/
 
+# Visual Studio Code
+*.code-workspace
+
 # Entries below this point are managed by Please (DO NOT EDIT)
 plz-out
 .plzconfig.local
 
 # Debug notebooks
 debug/
+
+# Vagrant
+.vagrant/
+
+# Ansible downloaded collections
+collections/
+roles/galaxy/
+
+# misc
+TODO.yml

@@ -1,0 +1,40 @@
+---
+- hosts: "{{ hostlist | default('all') }}"
+  become: true
+  tags:
+    - nvidia
+    - nvidia_driver
+  tasks:
+    - name: install custom facts
+      include_role:
+        name: facts
+
+    # # Run this with: ansible-playbook --start-at-task "debug1" --limit "slurm-head01" ...
+    # - name: "debug1"
+    #   debug:
+    #     # example output none-gpu: msg: ansible_local['gpus'] {}
+    #     # example output with-gpu: msg: ansible_local['gpus'] {'count': 1}
+    #     msg: "ansible_local['gpus'] {{ ansible_local['gpus'] }}"
+
+    - name: install nvidia driver
+      include_role:
+        name: nvidia.nvidia_driver
+      when: >
+        nvidia_driver_force_install|default(false) or
+        (
+          cuda_playbook_install_driver|default(true) and
+          ansible_local['gpus'].count is defined and
+          ansible_local['gpus']['count']
+        )
+      tags:
+        - nvidia_driver
+
+    - name: test nvidia-smi
+      command: nvidia-smi
+      changed_when: false
+      when: >
+        (ansible_local['gpus'].count is defined and ansible_local['gpus']['count'])
+      tags:
+        - nvidia_driver
+  # Fixed: [206] Variables should have spaces before and after: {{ var_name }}
+  environment: "{{ proxy_env if proxy_env is defined else{} }}"
