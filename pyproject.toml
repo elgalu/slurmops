@@ -19,7 +19,7 @@ license = "Apache 2.0"
 # https://pypi.org/classifiers/
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: Implementation",
   # TODO: support (test) also PyPy python implementation
   "Programming Language :: Python :: Implementation :: CPython",
@@ -46,7 +46,7 @@ Changelog = "https://github.com/elgalu/slurmops/blob/main/CHANGELOG.md"
 Issues = "https://github.com/elgalu/slurmops/issues"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 # https://github.com/madzak/python-json-logger
 python_json_logger = "^0.1"
 # https://github.com/yaml/pyyaml
